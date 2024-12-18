@@ -38,7 +38,8 @@ SHELL= bash
 # target information #
 ######################
 
-DESTDIR= /usr/local/bin
+PREFIX= /usr/local
+DESTDIR= ${PREFIX}/bin
 
 TARGETS= pwned-pw-download
 
@@ -69,4 +70,5 @@ clobber: clean
 	@:
 
 install: all
+	${INSTALL} -v -d -m 0775 ${DESTDIR}
 	${INSTALL} -m 0555 ${TARGETS} ${DESTDIR}
