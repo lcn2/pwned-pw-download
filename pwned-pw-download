@@ -1,0 +1,354 @@
+#!/usr/bin/env bash
+#
+# pwned-pw-download.sh - Download the pwned database in a 4 level deep directory tree
+#
+# The `pwned-pw-download.sh` shell script will download the entire dataset used by
+# [HIBP](https://haveibeenpwned.com/Passwords) into a 4 level directory tree.
+# 
+# Unlike some downloads, this will will NOT form a huge directory, which for many
+# file systems is not very efficient.  Instead, we form a 4 level tree where
+# the bottom level directors contain only 256 files each, plus a `curl.out' file
+# for diagnostic purposes.
+#
+# Please see `README.md` for more details.
+#
+# NOTE: It takes about 25 minutes to download the tree.
+#
+# NOTE: The tree contains 4369 directories and 1048576 files
+#	not including files such as curl.out and the top level repo files.
+#
+# This code came from the following GitHub repo:
+#
+#	https://github.com/lcn2/pwned-pw-download
+#
+# Copyright (c) 2024 by Landon Curt Noll.  All Rights Reserved.
+#
+# Permission to use, copy, modify, and distribute this software and
+# its documentation for any purpose and without fee is hereby granted,
+# provided that the above copyright, this permission notice and text
+# this comment, and the disclaimer below appear in all of the following:
+#
+#       supporting documentation
+#       source copies
+#       source works derived from this source
+#       binaries derived from this source or from derived source
+#
+# LANDON CURT NOLL DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+# INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+# EVENT SHALL LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+# CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+# USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+# OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+#
+# chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+#
+#
+# Share and enjoy! :-)
+
+
+# firewall - run only with a bash that is version 5.1.8 or later
+#
+# The "/usr/bin/env bash" command must result in using a bash that
+# is version 5.1.8 or later.
+#
+# We could relax this version and insist on version 4.2 or later.  Versions
+# of bash between 4.2 and 5.1.7 might work.  However, to be safe, we will require
+# bash version 5.1.8 or later.
+#
+# WHY 5.1.8 and not 4.2?  This safely is done because macOS Homebrew bash we
+# often use is "version 5.2.26(1)-release" or later, and the RHEL Linux bash we
+# use often use is "version 5.1.8(1)-release" or later.  These versions are what
+# we initially tested.  We recommend you either upgrade bash or install a newer
+# version of bash and adjust your $PATH so that "/usr/bin/env bash" finds a bash
+# that is version 5.1.8 or later.
+#
+# NOTE: The macOS shipped, as of 2024 March 15, a version of bash is something like
+#	bash "version 3.2.57(1)-release".  That macOS shipped version of bash
+#	will NOT work.  For users of macOS we recommend you install Homebrew,
+#	(see https://brew.sh), and then run "brew install bash" which will
+#	typically install it into /opt/homebrew/bin/bash, and then arrange your $PATH
+#	so that "/usr/bin/env bash" finds "/opt/homebrew/bin" (or whatever the
+#	Homebrew bash is).
+#
+# NOTE: And while MacPorts might work, we noticed a number of subtle differences
+#	with some of their ported tools to suggest you might be better off
+#	with installing Homebrew (see https://brew.sh).  No disrespect is intended
+#	to the MacPorts team as they do a commendable job.  Nevertheless we ran
+#	into enough differences with MacPorts environments to suggest you
+#	might find a better experience with this tool under Homebrew instead.
+#
+if [[ -z ${BASH_VERSINFO[0]} ||
+	 ${BASH_VERSINFO[0]} -lt 5 ||
+	 ${BASH_VERSINFO[0]} -eq 5 && ${BASH_VERSINFO[1]} -lt 1 ||
+	 ${BASH_VERSINFO[0]} -eq 5 && ${BASH_VERSINFO[1]} -eq 1 && ${BASH_VERSINFO[2]} -lt 8 ]]; then
+    echo "$0: ERROR: bash version needs to be >= 5.1.8: $BASH_VERSION" 1>&2
+    echo "$0: Warning: bash version >= 4.2 might work but 5.1.8 was the minimum we tested" 1>&2
+    echo "$0: Notice: For macOS users: install Homebrew (see https://brew.sh), then run" \
+	 ""brew install bash" and then modify your \$PATH so that \"#!/usr/bin/env bash\"" \
+	 "finds the Homebrew installed (usually /opt/homebrew/bin/bash) version of bash" 1>&2
+    exit 4
+fi
+
+# setup bash options
+#
+shopt -s nullglob	# enable expanded to nothing rather than remaining unexpanded
+shopt -u failglob	# disable error message if no matches are found
+shopt -u dotglob	# disable matching files starting with .
+shopt -u nocaseglob	# disable strict case matching
+shopt -u extglob	# enable extended globbing patterns
+shopt -s globstar	# enable ** to match all files and zero or more directories and subdirectories
+
+
+# setup
+#
+export VERSION="1.0 2024-12-17"
+NAME=$(basename "$0")
+export NAME
+#
+export V_FLAG=0
+#
+export EXIT_CODE=0
+export BASE_RANGE_URL="https://api.pwnedpasswords.com/range"
+
+
+# usage
+#
+export USAGE="usage: $0 [-h] [-v level] [-V] topdir
+
+	-h		print help message and exit
+	-v level	set verbosity level (def level: $V_FLAG)
+	-V		print version string and exit
+
+	topdir		top of the 4-level pwned password tree
+
+	NOTE: It takes about 25 minutes to download the tree.
+
+	NOTE: The tree contains 4369 directories and contains 1048576 files
+	      not including files such as curl.out and the top level repo files.
+
+	NOTE: For more information see:
+
+	    https://github.com/lcn2/pwned-pw-download
+
+Exit codes:
+     0         all OK
+     1	       some internal tool exited non-zero
+     2         -h and help string printed or -V and version string printed
+     3         command line error
+     4         bash version is too old
+     5	       topdir alerady exists or cannot make topdir
+     6         some curl command exited non-zer0
+ >= 10         internal error
+
+$NAME version: $VERSION"
+
+
+# parse command line
+#
+while getopts :hv:V flag; do
+  case "$flag" in
+    h) echo "$USAGE"
+	exit 2
+	;;
+    v) V_FLAG="$OPTARG"
+	;;
+    V) echo "$VERSION"
+	exit 2
+	;;
+    \?) echo "$0: ERROR: invalid option: -$OPTARG" 1>&2
+	echo 1>&2
+	echo "$USAGE" 1>&2
+	exit 3
+	;;
+    :) echo "$0: ERROR: option -$OPTARG requires an argument" 1>&2
+	echo 1>&2
+	echo "$USAGE" 1>&2
+	exit 3
+	;;
+    *) echo "$0: ERROR: unexpected value from getopts: $flag" 1>&2
+	echo 1>&2
+	echo "$USAGE" 1>&2
+	exit 3
+	;;
+  esac
+done
+if [[ $V_FLAG -ge 1 ]]; then
+    echo "$0: debug[1]: debug level: $V_FLAG" 1>&2
+fi
+#
+# remove the options
+#
+shift $(( OPTIND - 1 ));
+#
+# verify arg count
+#
+if [[ $# -ne 1 ]]; then
+    echo "$0: ERROR: expected 1 arg, found: $#" 1>&2
+    echo "$USAGE" 1>&2
+    exit 3
+fi
+#
+# parse args
+#
+export TOPDIR="$1"
+if [[ -z $TOPDIR ]]; then
+    echo "$0: topdir arg cannot be empty" 1>&2
+    echo "$USAGE" 1>&2
+    exit 3
+fi
+
+
+# print running info if verbose
+#
+# If -v 3 or higher, print exported variables in order that they were exported.
+#
+if [[ $V_FLAG -ge 3 ]]; then
+    echo "$0: debug[3]: VERSION=$VERSION" 1>&2
+    echo "$0: debug[3]: NAME=$NAME" 1>&2
+    echo "$0: debug[3]: V_FLAG=$V_FLAG" 1>&2
+    echo "$0: debug[3]: EXIT_CODE=$EXIT_CODE" 1>&2
+    echo "$0: debug[3]: BASE_RANGE_URL=$BASE_RANGE_URL" 1>&2
+    echo "$0: debug[3]: TOPDIR=$TOPDIR" 1>&2
+fi
+
+
+# Create the TOPDIR if needed
+#
+if [[ $V_FLAG -ge 3 ]]; then
+    echo "$0: debug[3]: forming the pwned password tree under: $TOPDIR" 1>&2
+fi
+mkdir -p "$TOPDIR"
+status=$?
+if [[ $status -ne 0 || ! -d $TOPDIR ]]; then
+    echo "$0: mkdir -p $TOPDIR failed, error: $status" 1>&2
+    exit 5
+fi
+
+
+# move to the top of TOPDIR
+#
+CD_FAILED=
+cd "$TOPDIR" || CD_FAILED="true"
+if [[ $CD_FAILED ]]; then
+    echo "$0: ERROR: cd $TOPDIR failed" 1>&2
+    exit 10
+fi
+
+
+# determine the full TOPDIR PATH
+#
+TOPDIR_PATH=$(/bin/pwd)
+status="$?"
+if [[ $status -ne 0 || -z $TOPDIR_PATH ]]; then
+    echo "$0: ERROR: cd $TOPDIR ; /bin/pwd failed" 1>&2
+    exit 11
+fi
+
+
+# Be sure the TOPDIR directory tree exists and contains all of the needed directories
+#
+for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
+    for j in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
+	for k in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
+	    echo "$i/$j/$k"
+	done
+    done
+done | xargs mkdir -p
+status=$?
+if [[ $status -ne 0 ]]; then
+    echo "$0: making sub-directories under $TOPDIR failed, error: $status" 1>&2
+    exit 5
+fi
+
+
+# create a temporary exit code
+#
+# It is a pain to set the EXIT_CODE deep inside a loop, so we write the EXIT_CODE into a file
+# and read the file (setting EXIT_CODE again) after the loop.  A hack, but good enough for our needs.
+#
+export TMP_EXIT_CODE="$TOPDIR_PATH/.tmp.$NAME.EXIT_CODE.$$.tmp"
+if [[ $V_FLAG -ge 3 ]]; then
+    echo  "$0: debug[3]: temporary exit code: $TMP_EXIT_CODE" 1>&2
+fi
+trap 'rm -f $TMP_EXIT_CODE; exit' 0 1 2 3 15
+rm -f "$TMP_EXIT_CODE"
+if [[ -e $TMP_EXIT_CODE ]]; then
+    echo "$0: ERROR: cannot remove temporary exit code: $TMP_EXIT_CODE" 1>&2
+    exit 12
+fi
+echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
+if [[ ! -e $TMP_EXIT_CODE ]]; then
+    echo "$0: ERROR: cannot create temporary exit code: $TMP_EXIT_CODE" 1>&2
+    exit 13
+fi
+
+
+# download files under the TOPDIR tree 64 at a time
+#
+export CD_FAILED=
+for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
+    for j in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
+
+	# light debug
+	#
+	if [[ $V_FLAG -ge 1 ]]; then
+	    echo "$0: debug[1]: processing: $i$j" 1>&2
+	fi
+
+	for k in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
+
+	    # moderate debug
+	    #
+	    if [[ $V_FLAG -ge 2 ]]; then
+		echo "$0: debug[2]: processing: $i$j$k" 1>&2
+	    fi
+
+	    # paranoia - directory in the just created directory tree must exist
+	    #
+	    if [[ ! -d $TOPDIR_PATH/$i/$j/$k ]]; then
+		echo "$0: ERROR: missing directory $TOPDIR/$i/$j/$k" 1>&2
+		exit 14
+	    fi
+
+	    # cd to the specific directory
+	    #
+	    CD_FAILED=
+	    cd "$TOPDIR_PATH/$i/$j/$k" || CD_FAILED="true"
+	    if [[ -n $CD_FAILED ]]; then
+		echo "$0: ERROR: cd $TOPDIR_PATH/$i$j$k failed" 1>&2
+		exit 15
+	    fi
+
+	    # download up to 256 files, up to 64 at a time
+	    #
+	    # NOTE: We could do up to, for example, 150 at a time, but 150 is only about 2% faster than 64
+	    #	    so we opt for a nicer load on the local and remote hosts.
+	    #
+	    curl --retry 10 --retry-all-errors --remote-name-all --parallel --parallel-max 64 \
+		"$BASE_RANGE_URL/$i$j$k{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F}{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F}" \
+		> "curl.out" 2>&1
+	    status="$?"
+	    if [[ $status -ne 0 ]]; then
+		echo "$0: Warning: curl --retry 10 --retry-all-errors --remote-name-all --parallel --parallel-max 64" \
+                  "$BASE_RANGE_URL/$i$j$k{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F}{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F}" \
+		  "failed, error: $status" 1>&2
+		EXIT_CODE=6 # exit 6
+		echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
+		echo "$0: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+	    fi
+	done
+    done
+done
+
+
+# All Done!!! -- Jessica Noll, Age 2
+#
+if [[ -s $TMP_EXIT_CODE ]]; then
+    EXIT_CODE=$(< "$TMP_EXIT_CODE")
+else
+    echo "$0: Warning: TMP_EXIT_CODE file is empty: $TMP_EXIT_CODE" 1>&2
+    EXIT_CODE=16 # exit 16
+    echo "$0: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+fi
+exit "$EXIT_CODE"
