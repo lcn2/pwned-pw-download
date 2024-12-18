@@ -102,7 +102,7 @@ shopt -s globstar	# enable ** to match all files and zero or more directories an
 
 # setup
 #
-export VERSION="1.0 2024-12-17"
+export VERSION="1.1 2024-12-18"
 NAME=$(basename "$0")
 export NAME
 #
@@ -110,7 +110,13 @@ export V_FLAG=0
 #
 export EXIT_CODE=0
 export BASE_RANGE_URL="https://api.pwnedpasswords.com/range"
-
+#
+DOS2UNIX=$(type -P dos2unix)
+export DOS2UNIX
+if [[ -z $DOS2UNIX ]]; then
+    echo "$0: ERROR: dos2unix command not found" 1>&2
+    exit 7
+fi
 
 # usage
 #
@@ -133,12 +139,12 @@ export USAGE="usage: $0 [-h] [-v level] [-V] topdir
 
 Exit codes:
      0         all OK
-     1	       some internal tool exited non-zero
      2         -h and help string printed or -V and version string printed
      3         command line error
      4         bash version is too old
-     5	       topdir alerady exists or cannot make topdir
-     6         some curl command exited non-zer0
+     5	       cannot make some directory under topdir
+     6         some curl command exited non-zero
+     7	       some dos2unix command exited nonzero, or dos2unix command not found
  >= 10         internal error
 
 $NAME version: $VERSION"
@@ -209,6 +215,7 @@ if [[ $V_FLAG -ge 3 ]]; then
     echo "$0: debug[3]: V_FLAG=$V_FLAG" 1>&2
     echo "$0: debug[3]: EXIT_CODE=$EXIT_CODE" 1>&2
     echo "$0: debug[3]: BASE_RANGE_URL=$BASE_RANGE_URL" 1>&2
+    echo "$0: debug[3]: DOS2UNIX=$DOS2UNIX" 1>&2
     echo "$0: debug[3]: TOPDIR=$TOPDIR" 1>&2
 fi
 
@@ -337,6 +344,16 @@ for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
 		echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
 		echo "$0: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
 	    fi
+
+	    # convert from DOS to UNIX format
+	    #
+	    find . -type f -name '[0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]' -print | xargs "$DOS2UNIX" -q
+
+	    # add missing final newlines
+	    #
+	    find . -type f -name '[0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]' -print | while read file; do
+		echo "" >> "$file"
+	    done
 	done
     done
 done
