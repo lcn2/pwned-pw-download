@@ -20,15 +20,20 @@ To use, we suggest:
 ## Usage
 
 ```
-usage: ./pwned-pw-download [-h] [-v level] [-V] topdir
+usage: ./pwned-pw-download [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] topdir
 
-    -h		print help message and exit
-    -v level	set verbosity level (def level: 0)
-    -V		print version string and exit
+    -h          print help message and exit
+    -v level    set verbosity level (def level: 0)
+    -V          print version string and exit
 
-    topdir		top of the 4-level pwned password tree
+    -a          do not append a final newline to downloaded files (def: do)
+    -d          do not un-DOS downloaded files (def: convert using /opt/homebrew/bin/dos2unix)
+    -p parallel curl(1) files up to parallel at a time (def: 64)
+    -U base_url curl(1) files from under base_url (def: https://api.pwnedpasswords.com/range)
 
-    NOTE: It takes about 25 minutes to download the pwned password tree.
+    topdir      top of the 4-level pwned password tree to form
+
+    NOTE: It takes about 25 minutes to download the tree.
 
     NOTE: The tree contains 4369 directories and contains 1048576 files
           not including files such as curl.out and the top level repo files.
@@ -39,16 +44,23 @@ usage: ./pwned-pw-download [-h] [-v level] [-V] topdir
 
 Exit codes:
      0         all OK
-     1	       some internal tool exited non-zero
      2         -h and help string printed or -V and version string printed
      3         command line error
      4         bash version is too old
-     5	       topdir alerady exists or cannot make topdir
-     6         some curl command exited non-zer0
+     5         cannot make some directory under topdir
+     6         some curl command exited non-zero
+     7         some dos2unix command exited nonzero, or dos2unix command not found
  >= 10         internal error
 
-pwned-pw-download version: 1.0 2024-12-17
+pwned-pw-download version: 1.2 2024-12-18
 ```
+
+**IMPORTANT NOTE**: As of 2024-Dec-17, the original files from
+[https://api.pwnedpasswords.com/range](https://api.pwnedpasswords.com/range)
+are in "_DOS_" format and they lack a final newline character.
+The `pwned-pw-download` tool assumes that you prefer a more modern file
+format and converts the files using the `dos2unix(1)` utility.  Should you
+prefer the original file format, use both `-d -a` on the command line.
 
 
 ## Why a 4 level tree
@@ -89,6 +101,7 @@ For eample, all pwned passwords with a SHA-1 that begin with `12345` will be fou
 ```
 
 NOTE: The first 1 SHA-1 HEX characters are duplicated in the 3 directory levels.
+
 
 
 ## Example: a line from 1/2/3/12345

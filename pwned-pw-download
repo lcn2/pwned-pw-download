@@ -4,7 +4,7 @@
 #
 # The `pwned-pw-download.sh` shell script will download the entire dataset used by
 # [HIBP](https://haveibeenpwned.com/Passwords) into a 4 level directory tree.
-# 
+#
 # Unlike some downloads, this will will NOT form a huge directory, which for many
 # file systems is not very efficient.  Instead, we form a 4 level tree where
 # the bottom level directors contain only 256 files each, plus a `curl.out' file
@@ -102,14 +102,22 @@ shopt -s globstar	# enable ** to match all files and zero or more directories an
 
 # setup
 #
-export VERSION="1.1 2024-12-18"
+export VERSION="1.2 2024-12-18"
 NAME=$(basename "$0")
 export NAME
 #
 export V_FLAG=0
-#
-export EXIT_CODE=0
+export A_FLAG=
+export D_FLAG=
+export PARALLEL=64
 export BASE_RANGE_URL="https://api.pwnedpasswords.com/range"
+#
+CURL=$(type -P curl)
+export CURL
+if [[ -z $CURL ]]; then
+    echo "$0: ERROR: curl command not found" 1>&2
+    exit 6
+fi
 #
 DOS2UNIX=$(type -P dos2unix)
 export DOS2UNIX
@@ -117,34 +125,41 @@ if [[ -z $DOS2UNIX ]]; then
     echo "$0: ERROR: dos2unix command not found" 1>&2
     exit 7
 fi
+#
+export EXIT_CODE=0
 
 # usage
 #
-export USAGE="usage: $0 [-h] [-v level] [-V] topdir
+export USAGE="usage: $0 [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] topdir
 
-	-h		print help message and exit
-	-v level	set verbosity level (def level: $V_FLAG)
-	-V		print version string and exit
+    -h          print help message and exit
+    -v level    set verbosity level (def level: $V_FLAG)
+    -V          print version string and exit
 
-	topdir		top of the 4-level pwned password tree
+    -a          do not append a final newline to downloaded files (def: do)
+    -d          do not un-DOS downloaded files (def: convert using $DOS2UNIX)
+    -p parallel curl(1) files up to parallel at a time (def: $PARALLEL)
+    -U base_url curl(1) files from under base_url (def: $BASE_RANGE_URL)
 
-	NOTE: It takes about 25 minutes to download the tree.
+    topdir      top of the 4-level pwned password tree to form
 
-	NOTE: The tree contains 4369 directories and contains 1048576 files
-	      not including files such as curl.out and the top level repo files.
+    NOTE: It takes about 25 minutes to download the tree.
 
-	NOTE: For more information see:
+    NOTE: The tree contains 4369 directories and contains 1048576 files
+          not including files such as curl.out and the top level repo files.
 
-	    https://github.com/lcn2/pwned-pw-download
+    NOTE: For more information see:
+
+        https://github.com/lcn2/pwned-pw-download
 
 Exit codes:
      0         all OK
      2         -h and help string printed or -V and version string printed
      3         command line error
      4         bash version is too old
-     5	       cannot make some directory under topdir
+     5         cannot make some directory under topdir
      6         some curl command exited non-zero
-     7	       some dos2unix command exited nonzero, or dos2unix command not found
+     7         some dos2unix command exited nonzero, or dos2unix command not found
  >= 10         internal error
 
 $NAME version: $VERSION"
@@ -152,7 +167,7 @@ $NAME version: $VERSION"
 
 # parse command line
 #
-while getopts :hv:V flag; do
+while getopts :hv:Vadp:U: flag; do
   case "$flag" in
     h) echo "$USAGE"
 	exit 2
@@ -161,6 +176,14 @@ while getopts :hv:V flag; do
 	;;
     V) echo "$VERSION"
 	exit 2
+	;;
+    a) A_FLAG="true"
+	;;
+    d) D_FLAG="true"
+	;;
+    p) PARALLEL="$OPTARG"
+	;;
+    U) BASE_RANGE_URL="$OPTARG"
 	;;
     \?) echo "$0: ERROR: invalid option: -$OPTARG" 1>&2
 	echo 1>&2
@@ -214,9 +237,13 @@ if [[ $V_FLAG -ge 3 ]]; then
     echo "$0: debug[3]: VERSION=$VERSION" 1>&2
     echo "$0: debug[3]: NAME=$NAME" 1>&2
     echo "$0: debug[3]: V_FLAG=$V_FLAG" 1>&2
-    echo "$0: debug[3]: EXIT_CODE=$EXIT_CODE" 1>&2
+    echo "$0: debug[3]: A_FLAG=$A_FLAG" 1>&2
+    echo "$0: debug[3]: D_FLAG=$D_FLAG" 1>&2
+    echo "$0: debug[3]: PARALLEL=$PARALLEL" 1>&2
     echo "$0: debug[3]: BASE_RANGE_URL=$BASE_RANGE_URL" 1>&2
+    echo "$0: debug[3]: CURL=$CURL" 1>&2
     echo "$0: debug[3]: DOS2UNIX=$DOS2UNIX" 1>&2
+    echo "$0: debug[3]: EXIT_CODE=$EXIT_CODE" 1>&2
     echo "$0: debug[3]: TOPDIR=$TOPDIR" 1>&2
 fi
 
@@ -292,7 +319,7 @@ if [[ ! -e $TMP_EXIT_CODE ]]; then
 fi
 
 
-# download files under the TOPDIR tree 64 at a time
+# download files under the TOPDIR tree PARALLEL at a time
 #
 export CD_FAILED=
 for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
@@ -328,17 +355,17 @@ for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
 		exit 15
 	    fi
 
-	    # download up to 256 files, up to 64 at a time
+	    # download up to 256 files, up to PARALLEL at a time
 	    #
 	    # NOTE: We could do up to, for example, 150 at a time, but 150 is only about 2% faster than 64
 	    #	    so we opt for a nicer load on the local and remote hosts.
 	    #
-	    curl --retry 10 --retry-all-errors --remote-name-all --parallel --parallel-max 64 \
+	    "$CURL" --retry 10 --retry-all-errors --remote-name-all --parallel --parallel-max "$PARALLEL" \
 		"$BASE_RANGE_URL/$i$j$k{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F}{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F}" \
 		> "curl.out" 2>&1
 	    status="$?"
 	    if [[ $status -ne 0 ]]; then
-		echo "$0: Warning: curl --retry 10 --retry-all-errors --remote-name-all --parallel --parallel-max 64" \
+		echo "$0: Warning: $CURL --retry 10 --retry-all-errors --remote-name-all --parallel --parallel-max $PARALLEL" \
                   "$BASE_RANGE_URL/$i$j$k{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F}{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F}" \
 		  "failed, error: $status" 1>&2
 		EXIT_CODE=6 # exit 6
@@ -346,15 +373,25 @@ for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
 		echo "$0: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
 	    fi
 
-	    # convert from DOS to UNIX format
+	    # unless -d, un-DOS the files
 	    #
-	    find . -type f -name '[0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]' -print | xargs "$DOS2UNIX" -q
+	    if [[ -z $D_FLAG ]]; then
 
-	    # add missing final newlines
+		# convert from DOS to UNIX format
+		#
+		find . -type f -name '[0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]' -print0 | xargs -0 "$DOS2UNIX" -q --
+	    fi
+
+	    # unless -a, append a newline
 	    #
-	    find . -type f -name '[0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]' -print | while read file; do
-		echo "" >> "$file"
-	    done
+	    if [[ -z $A_FLAG ]]; then
+
+		# append a final newline
+		#
+		find . -type f -name '[0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]' -print | while read -r file; do
+		    echo "" >> "$file"
+		done
+	    fi
 	done
     done
 done
