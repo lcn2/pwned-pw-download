@@ -157,3 +157,8 @@ This will produce the line:
 ```
 
 This indicates that the password "`password`", has been pwned at least 10437277 times!
+
+
+# Reporting Security Issues
+
+To report a security issue, please visit "[Reporting Security Issues](https://github.com/lcn2/pwned-pw-download/security/policy)".
