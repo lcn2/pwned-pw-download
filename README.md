@@ -8,19 +8,26 @@ The tree contains 4369 directories and 1048576 files
 not including the `curl.out` diagnostic files.
 
 
-## TL;DR
+# To install
+
+```sh
+make install
+```
+
+
+# Example
 
 To use, we suggest:
 
 ```sh
-./pwned-pw-download -v 3 pwned.password.tree
+$ /usr/local/bin/pwned-pw-download -v 3 pwned.password.tree
 ```
 
 
 ## Usage
 
 ```
-usage: ./pwned-pw-download [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] topdir
+/usr/local/bin/pwned-pw-download [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] topdir
 
     -h          print help message and exit
     -v level    set verbosity level (def level: 0)
