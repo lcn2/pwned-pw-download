@@ -2,12 +2,11 @@
 
 Download the pwned password database into a 4 level tree.
 
-## As of 2024 Dec 14
+The tree contains 4369 directories and 1048576 data files
+and, 4096 curl.out diagnostic files.
 
-It takes about 25 minutes to download the tree.
-
-The tree contains 4369 directories and 1048576 files
-not including the `curl.out` diagnostic files.
+As of 2025 Dec 03: It takes about 2 hours 15 minutes to
+download and compress the 40 GByte tree.
 
 
 # To install
@@ -29,7 +28,7 @@ pwned-pw-download -v 3 pwned.password.tree
 ## Usage
 
 ```
-/usr/local/bin/pwned-pw-download [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] topdir
+pwned-pw-download [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] [-b] topdir
 
     -h          print help message and exit
     -v level    set verbosity level (def level: 0)
@@ -39,6 +38,7 @@ pwned-pw-download -v 3 pwned.password.tree
     -d          do not un-DOS downloaded files (def: convert using /opt/homebrew/bin/dos2unix)
     -p parallel curl(1) files up to parallel at a time (def: 64)
     -U base_url curl(1) files from under base_url (def: https://api.pwnedpasswords.com/range)
+    -b		    do NOT bzip2 downloaded files (def: use $BZIP2 on downloaded files)
 
     topdir      top of the 4-level pwned password tree to form
 
@@ -54,9 +54,10 @@ Exit codes:
      5         cannot make some directory under topdir
      6         some curl command exited non-zero
      7         some dos2unix command exited nonzero, or dos2unix command not found
+     8         some bzip2 command exited nonzero, or bzip2 command not found
  >= 10         internal error
 
-pwned-pw-download version: 1.2 2024-12-18
+pwned-pw-download version: 1.3 2025-12-03
 ```
 
 **IMPORTANT NOTE**: As of 2024-Dec-17, the original files from
@@ -80,16 +81,22 @@ for diagnostic purposes.
 
 ## Pwned password tree layout
 
-The pwned password tree has 4 levels.  Files are of the form:
+The pwned password tree has 4 levels.  By default, files are of the form:
 
 ```
-i/j/k/ikjxy
+i/j/k/ikjxy.bz2
 ```
 
 where i, j, k, x, y are UPPER CASE hex digits:
 
 ```
 0 1 2 3 4 5 6 7 8 9 A B C D E F
+```
+
+If you used `-b` to disable the use of `bzip2(1)`, then files will be of the form:
+
+```
+i/j/k/ikjxy
 ```
 
 Each file is of the form:
@@ -145,10 +152,18 @@ The SHA-1 hash of "`password`" is:
 Using the first 5 hex digits, open the file:
 
 ```
-5/B/A/5BAA6
+5/B/A/5BAA6.bz2
 ```
 
+or if `-b` was used:
+
 Look for the remaining 35 hex digits followed by a `:`:
+
+```sh
+bzgrep -F 1E4C9B93F3F0682250B6CF8331B7EE68FD8: 5/B/A/5BAA6.bz2
+```
+
+or if `-b` was used:
 
 ```sh
 grep -F 1E4C9B93F3F0682250B6CF8331B7EE68FD8: 5/B/A/5BAA6
