@@ -2,6 +2,8 @@
 
 Download the pwned password database into a 4 level tree.
 
+## As of 2024 Dec 14
+
 It takes about 25 minutes to download the tree.
 
 The tree contains 4369 directories and 1048576 files
@@ -20,7 +22,7 @@ make install
 To use, we suggest:
 
 ```sh
-$ /usr/local/bin/pwned-pw-download -v 3 pwned.password.tree
+pwned-pw-download -v 3 pwned.password.tree
 ```
 
 
@@ -39,11 +41,6 @@ $ /usr/local/bin/pwned-pw-download -v 3 pwned.password.tree
     -U base_url curl(1) files from under base_url (def: https://api.pwnedpasswords.com/range)
 
     topdir      top of the 4-level pwned password tree to form
-
-    NOTE: It takes about 25 minutes to download the tree.
-
-    NOTE: The tree contains 4369 directories and contains 1048576 files
-          not including files such as curl.out and the top level repo files.
 
     NOTE: For more information see:
 
