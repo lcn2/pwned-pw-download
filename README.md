@@ -13,7 +13,7 @@ not including the `curl.out` diagnostic files.
 # To install
 
 ```sh
-make install
+sudo make install
 ```
 
 
