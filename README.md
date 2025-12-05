@@ -54,7 +54,7 @@ The uncompressed pwned password tree is about twice that size,
 and so we recommend not using the `-b` to disable compression
 if you can help it.
 
-As of 2025 Dec 03: The `pwned-pw-download` tool` takes about
+As of 2025 Dec 03: The `pwned-pw-download` tool takes about
 2 hours 15 minutes to download and compress the tree
 as it is being downloaded.
 
@@ -81,16 +81,16 @@ sudo make install
 
 **NOTE**: You do **NOT** have to install.  The `make install` can make
 the `pwned-pw-download` and `ispwned` tools available under `/usr/local/bin`
-if you have privilieges to install things under `/usr/local/bin`.
+if you have privileges to install things under `/usr/local/bin`.
 
-To instal them elsewhere, such as `/var/tmp`:
+To install them elsewhere, such as `/var/tmp`:
 
 ```sh
 make install DESTDIR=/var/tmp
 ```
 
 Or you can just run the commands from within the `pwned-pw-download` repo
-without installing amything:
+without installing anything:
 
 ```sh
 cd pwned-pw-download
@@ -102,7 +102,7 @@ cd pwned-pw-download
 # Example of using pwned-pw-download
 
 You may need to create `/usr/local/share/pwned.pw.tree` as as root
-and then give youself write access before running `pwned-pw-download`,
+and then give yourself write access before running `pwned-pw-download`,
 where `user` is your UNIX username and `group` is your UNIX groupname:
 
 ```sh
@@ -134,7 +134,7 @@ The examples below assume that the `pwned-pw-download` has been downloaded
 under the default `/usr/local/share/pwned.pw.tree` directory.  If you
 need to install it elsewhere, add `-d /path/to/tree` to the commands.
 
-**NOTE**: The exmaples below assume that `ispwned` has been put
+**NOTE**: The examples below assume that `ispwned` has been put
 into your search `$PATH`.  If it is not, supply the full path
 to where you find the `ispwned` tool.
 
@@ -144,7 +144,7 @@ Supply a password as an argument:
 ispwned password
 ```
 
-If you would prefer to NOT have the password visiable as an argument (that
+If you would prefer to NOT have the password visible as an argument (that
 someone running `ps(1)` might be able to see, then run `ispwned` without
 any arguments and type the file in input and end with an EOF (type Control D):
 
@@ -190,7 +190,7 @@ use the `-o` option:
 ispwned -o dfasdfds2f sadfdsfsdafsdafasd fbwebwefiewbfwe
 ```
 
-The `ispwned` tool will exit 0 is none of the passwords (or SHA-1 hashes
+The `ispwned` tool will exit 0 if none of the passwords (or SHA-1 hashes
 if `-s` is given) are found in the local pwned password tree.
 If any password (or SHA-1 hashes if `-s` is given) is found, the tool
 will exit 1.
@@ -290,7 +290,7 @@ The `pwned-pw-download.sh` shell script will download the entire dataset used by
 
 Unlike some downloads, this will will NOT form a huge directory, which for many
 file systems is not very efficient.  Instead, we form a 4 level tree where
-the bottom level directors contain only 256 files each, plus a `curl.out' file
+the bottom level directors contain only 256 files each, plus a `curl.out` file
 for diagnostic purposes.
 
 
@@ -404,7 +404,7 @@ the number of instances found is unknown.  Moreover counts <= 0
 could be the result of an integer overflow in the part of the
 creators of the Pwned password dataset.
 
-Therefore, the count should be regards as informational, and is NOT
+Therefore, the count should be considered informational, and is NOT
 a means to determine if a given password is Pwned.
 
 
