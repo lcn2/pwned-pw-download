@@ -421,9 +421,9 @@ while read -r line; do
 	# Look for a line in a compressed file that starts with the rest of the SHA-1 hash
 	#
 	if [[ $V_FLAG -ge 5 ]]; then
-	    echo "$NAME: debug[5]: about to execute: $BZGREP_TOOL -a -e $HASH_REGEX -h -- $FILE_PATH_BZ2" 1>&2
+	    echo "$NAME: debug[5]: about to execute: $BZGREP_TOOL -a -h -- $HASH_REGEX $FILE_PATH_BZ2" 1>&2
 	fi
-	FOUND=$("$BZGREP_TOOL" -a -e "$HASH_REGEX" -h -- "$FILE_PATH_BZ2" 2>/dev/null)
+	FOUND=$("$BZGREP_TOOL" -a -h -- "$HASH_REGEX" "$FILE_PATH_BZ2" 2>/dev/null)
 
     # case: we have regular file in the password tree filename
     #
@@ -432,9 +432,9 @@ while read -r line; do
 	# Look for a line that starts with the rest of the SHA-1 hash
 	#
 	if [[ $V_FLAG -ge 5 ]]; then
-	    echo "$NAME: debug[5]: about to execute: $GREP_TOOL -a -e $HASH_REGEX -h -- $FILE_PATH" 1>&2
+	    echo "$NAME: debug[5]: about to execute: $GREP_TOOL -a -h -- $HASH_REGEX $FILE_PATH" 1>&2
 	fi
-	FOUND=$("$GREP_TOOL" -a -e "$HASH_REGEX" -h -- "$FILE_PATH" 2>/dev/null)
+	FOUND=$("$GREP_TOOL" -a -h -- "$HASH_REGEX" "$FILE_PATH" 2>/dev/null)
 
     # case: missing password tree filename
     #
