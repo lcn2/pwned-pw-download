@@ -5,7 +5,7 @@
 # The `pwned-pw-download.sh` shell script will download the entire dataset used by
 # [HIBP](https://haveibeenpwned.com/Passwords) into a 4 level directory tree.
 #
-# Unlike some downloads, this will will NOT form a huge directory, which for many
+# Unlike some downloads, this will will NOT form a huge single directory, which for many
 # file systems is not very efficient.  Instead, we form a 4 level tree where
 # the bottom level directors contain only 256 files each, plus a `curl.out' file
 # for diagnostic purposes.
@@ -97,7 +97,7 @@ shopt -s globstar	# enable ** to match all files and zero or more directories an
 
 # setup
 #
-export VERSION="1.3 2025-12-03"
+export VERSION="1.3.0 2025-12-03"
 NAME=$(basename "$0")
 export NAME
 #
@@ -133,7 +133,7 @@ export EXIT_CODE=0
 
 # usage
 #
-export USAGE="usage: $0 [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] [-b] topdir
+export USAGE="usage: $NAME [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] [-b] topdir
 
     -h          print help message and exit
     -v level    set verbosity level (def level: $V_FLAG)
@@ -187,17 +187,17 @@ while getopts :hv:Vadp:U:b flag; do
 	;;
     b) B_FLAG="true"
 	;;
-    \?) echo "$0: ERROR: invalid option: -$OPTARG" 1>&2
+    \?) echo "$NAME: ERROR: invalid option: -$OPTARG" 1>&2
 	echo 1>&2
 	echo "$USAGE" 1>&2
 	exit 3
 	;;
-    :) echo "$0: ERROR: option -$OPTARG requires an argument" 1>&2
+    :) echo "$NAME: ERROR: option -$OPTARG requires an argument" 1>&2
 	echo 1>&2
 	echo "$USAGE" 1>&2
 	exit 3
 	;;
-    *) echo "$0: ERROR: unexpected value from getopts: $flag" 1>&2
+    *) echo "$NAME: ERROR: unexpected value from getopts: $flag" 1>&2
 	echo 1>&2
 	echo "$USAGE" 1>&2
 	exit 3
@@ -205,7 +205,7 @@ while getopts :hv:Vadp:U:b flag; do
   esac
 done
 if [[ $V_FLAG -ge 1 ]]; then
-    echo "$0: debug[1]: debug level: $V_FLAG" 1>&2
+    echo "$NAME: debug[1]: debug level: $V_FLAG" 1>&2
 fi
 #
 # remove the options
@@ -215,7 +215,7 @@ shift $(( OPTIND - 1 ));
 # verify arg count
 #
 if [[ $# -ne 1 ]]; then
-    echo "$0: ERROR: expected 1 arg, found: $#" 1>&2
+    echo "$NAME: ERROR: expected 1 arg, found: $#" 1>&2
     echo 1>&2
     echo "$USAGE" 1>&2
     exit 3
@@ -225,7 +225,7 @@ fi
 #
 export TOPDIR="$1"
 if [[ -z $TOPDIR ]]; then
-    echo "$0: topdir arg cannot be empty" 1>&2
+    echo "$NAME: topdir arg cannot be empty" 1>&2
     echo "$USAGE" 1>&2
     exit 3
 fi
@@ -236,31 +236,31 @@ fi
 # If -v 3 or higher, print exported variables in order that they were exported.
 #
 if [[ $V_FLAG -ge 3 ]]; then
-    echo "$0: debug[3]: VERSION=$VERSION" 1>&2
-    echo "$0: debug[3]: NAME=$NAME" 1>&2
-    echo "$0: debug[3]: V_FLAG=$V_FLAG" 1>&2
-    echo "$0: debug[3]: A_FLAG=$A_FLAG" 1>&2
-    echo "$0: debug[3]: D_FLAG=$D_FLAG" 1>&2
-    echo "$0: debug[3]: B_FLAG=$B_FLAG" 1>&2
-    echo "$0: debug[3]: PARALLEL=$PARALLEL" 1>&2
-    echo "$0: debug[3]: BASE_RANGE_URL=$BASE_RANGE_URL" 1>&2
-    echo "$0: debug[3]: CURL=$CURL" 1>&2
-    echo "$0: debug[3]: DOS2UNIX=$DOS2UNIX" 1>&2
-    echo "$0: debug[3]: BZIP2_PROG=$BZIP2_PROG" 1>&2
-    echo "$0: debug[3]: EXIT_CODE=$EXIT_CODE" 1>&2
-    echo "$0: debug[3]: TOPDIR=$TOPDIR" 1>&2
+    echo "$NAME: debug[3]: VERSION=$VERSION" 1>&2
+    echo "$NAME: debug[3]: NAME=$NAME" 1>&2
+    echo "$NAME: debug[3]: V_FLAG=$V_FLAG" 1>&2
+    echo "$NAME: debug[3]: A_FLAG=$A_FLAG" 1>&2
+    echo "$NAME: debug[3]: D_FLAG=$D_FLAG" 1>&2
+    echo "$NAME: debug[3]: B_FLAG=$B_FLAG" 1>&2
+    echo "$NAME: debug[3]: PARALLEL=$PARALLEL" 1>&2
+    echo "$NAME: debug[3]: BASE_RANGE_URL=$BASE_RANGE_URL" 1>&2
+    echo "$NAME: debug[3]: CURL=$CURL" 1>&2
+    echo "$NAME: debug[3]: DOS2UNIX=$DOS2UNIX" 1>&2
+    echo "$NAME: debug[3]: BZIP2_PROG=$BZIP2_PROG" 1>&2
+    echo "$NAME: debug[3]: EXIT_CODE=$EXIT_CODE" 1>&2
+    echo "$NAME: debug[3]: TOPDIR=$TOPDIR" 1>&2
 fi
 
 
 # Create the TOPDIR if needed
 #
 if [[ $V_FLAG -ge 3 ]]; then
-    echo "$0: debug[3]: forming the pwned password tree under: $TOPDIR" 1>&2
+    echo "$NAME: debug[3]: forming the pwned password tree under: $TOPDIR" 1>&2
 fi
 mkdir -p "$TOPDIR"
 status=$?
 if [[ $status -ne 0 || ! -d $TOPDIR ]]; then
-    echo "$0: mkdir -p $TOPDIR failed, error: $status" 1>&2
+    echo "$NAME: mkdir -p $TOPDIR failed, error: $status" 1>&2
     exit 5
 fi
 
@@ -270,7 +270,7 @@ fi
 CD_FAILED=
 cd "$TOPDIR" || CD_FAILED="true"
 if [[ $CD_FAILED ]]; then
-    echo "$0: ERROR: cd $TOPDIR failed" 1>&2
+    echo "$NAME: ERROR: cd $TOPDIR failed" 1>&2
     exit 10
 fi
 
@@ -280,7 +280,7 @@ fi
 TOPDIR_PATH=$(/bin/pwd)
 status="$?"
 if [[ $status -ne 0 || -z $TOPDIR_PATH ]]; then
-    echo "$0: ERROR: cd $TOPDIR ; /bin/pwd failed" 1>&2
+    echo "$NAME: ERROR: cd $TOPDIR ; /bin/pwd failed" 1>&2
     exit 11
 fi
 
@@ -296,7 +296,7 @@ for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
 done | xargs mkdir -p
 status=$?
 if [[ $status -ne 0 ]]; then
-    echo "$0: making sub-directories under $TOPDIR failed, error: $status" 1>&2
+    echo "$NAME: making sub-directories under $TOPDIR failed, error: $status" 1>&2
     exit 5
 fi
 
@@ -308,17 +308,17 @@ fi
 #
 export TMP_EXIT_CODE="$TOPDIR_PATH/.tmp.$NAME.EXIT_CODE.$$.tmp"
 if [[ $V_FLAG -ge 3 ]]; then
-    echo  "$0: debug[3]: temporary exit code: $TMP_EXIT_CODE" 1>&2
+    echo  "$NAME: debug[3]: temporary exit code: $TMP_EXIT_CODE" 1>&2
 fi
 trap 'rm -f $TMP_EXIT_CODE; exit' 0 1 2 3 15
 rm -f "$TMP_EXIT_CODE"
 if [[ -e $TMP_EXIT_CODE ]]; then
-    echo "$0: ERROR: cannot remove temporary exit code: $TMP_EXIT_CODE" 1>&2
+    echo "$NAME: ERROR: cannot remove temporary exit code: $TMP_EXIT_CODE" 1>&2
     exit 12
 fi
 echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
 if [[ ! -e $TMP_EXIT_CODE ]]; then
-    echo "$0: ERROR: cannot create temporary exit code: $TMP_EXIT_CODE" 1>&2
+    echo "$NAME: ERROR: cannot create temporary exit code: $TMP_EXIT_CODE" 1>&2
     exit 13
 fi
 
@@ -332,7 +332,7 @@ for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
 	# light debug
 	#
 	if [[ $V_FLAG -ge 1 ]]; then
-	    echo "$0: debug[1]: processing: $i$j" 1>&2
+	    echo "$NAME: debug[1]: processing: $i$j" 1>&2
 	fi
 
 	for k in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
@@ -340,13 +340,13 @@ for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
 	    # moderate debug
 	    #
 	    if [[ $V_FLAG -ge 3 ]]; then
-		echo "$0: debug[3]: processing: $i$j$k" 1>&2
+		echo "$NAME: debug[3]: processing: $i$j$k" 1>&2
 	    fi
 
 	    # paranoia - directory in the just created directory tree must exist
 	    #
 	    if [[ ! -d $TOPDIR_PATH/$i/$j/$k ]]; then
-		echo "$0: ERROR: missing directory $TOPDIR/$i/$j/$k" 1>&2
+		echo "$NAME: ERROR: missing directory $TOPDIR/$i/$j/$k" 1>&2
 		exit 14
 	    fi
 
@@ -355,7 +355,7 @@ for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
 	    CD_FAILED=
 	    cd "$TOPDIR_PATH/$i/$j/$k" || CD_FAILED="true"
 	    if [[ -n $CD_FAILED ]]; then
-		echo "$0: ERROR: cd $TOPDIR_PATH/$i$j$k failed" 1>&2
+		echo "$NAME: ERROR: cd $TOPDIR_PATH/$i$j$k failed" 1>&2
 		exit 15
 	    fi
 
@@ -369,12 +369,12 @@ for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
 		> "curl.out" 2>&1
 	    status="$?"
 	    if [[ $status -ne 0 ]]; then
-		echo "$0: Warning: $CURL --retry 10 --retry-all-errors --remote-name-all --parallel --parallel-max $PARALLEL" \
+		echo "$NAME: Warning: $CURL --retry 10 --retry-all-errors --remote-name-all --parallel --parallel-max $PARALLEL" \
                   "$BASE_RANGE_URL/$i$j$k{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F}{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F}" \
 		  "failed, error: $status" 1>&2
 		EXIT_CODE=6 # exit 6
 		echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
-		echo "$0: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+		echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
 	    fi
 
 	    # unless -d, un-DOS the files
@@ -401,15 +401,15 @@ for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
 	    #
 	    if [[ -z $B_FLAG ]]; then
 		if [[ $V_FLAG -ge 5 ]]; then
-		    echo "$0: debug[5]: running: $BZIP2_PROG -z -q -f --best" [0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F] 1>&2
+		    echo "$NAME: debug[5]: running: $BZIP2_PROG -z -q -f --best" [0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F] 1>&2
 		fi
 		"$BZIP2_PROG" -z -q -f --best [0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]
 		status="$?"
 		if [[ $status -ne 0 ]]; then
-		    echo "$0: Warning: $BZIP2_PROG -z -q -f --best in $TOPDIR/$i/$j/$k failed, error: $status" 1>&2
+		    echo "$NAME: Warning: $BZIP2_PROG -z -q -f --best in $TOPDIR/$i/$j/$k failed, error: $status" 1>&2
 		    EXIT_CODE=8 # exit 8
 		    echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
-		    echo "$0: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+		    echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
 		fi
 		if [[ $V_FLAG -ge 5 ]]; then
 		    df . 1>&2
@@ -425,8 +425,8 @@ done
 if [[ -s $TMP_EXIT_CODE ]]; then
     EXIT_CODE=$(< "$TMP_EXIT_CODE")
 else
-    echo "$0: Warning: TMP_EXIT_CODE file is empty: $TMP_EXIT_CODE" 1>&2
+    echo "$NAME: Warning: TMP_EXIT_CODE file is empty: $TMP_EXIT_CODE" 1>&2
     EXIT_CODE=16 # exit 16
-    echo "$0: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+    echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
 fi
 exit "$EXIT_CODE"

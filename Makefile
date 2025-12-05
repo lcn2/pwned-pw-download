@@ -37,7 +37,6 @@
 CC= cc
 CHMOD= chmod
 CP= cp
-ID= id
 INSTALL= install
 RM= rm
 SHELL= bash
@@ -56,7 +55,7 @@ V=@:
 PREFIX= /usr/local
 DESTDIR= ${PREFIX}/bin
 
-TARGETS= pwned-pw-download
+TARGETS= pwned-pw-download ispwned
 
 
 ######################################
@@ -93,7 +92,6 @@ clobber: clean
 
 install: all
 	${V} echo DEBUG =-= $@ start =-=
-	@if [[ $$(${ID} -u) != 0 ]]; then echo "ERROR: must be root to make $@" 1>&2; exit 2; fi
 	${INSTALL} -d -m 0755 ${DESTDIR}
 	${INSTALL} -m 0555 ${TARGETS} ${DESTDIR}
 	${V} echo DEBUG =-= $@ end =-=
