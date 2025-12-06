@@ -3,18 +3,18 @@
 
 ## TL;DR
 
-Download the pwned password database.  Look up passwords or hash of passwords in your database.
+Download the pwned password database.  Look up passwords or hashes of passwords in your database.
 
 
-## What is Pwned?
+## What is pwned?
 
-A good definition of Pwned is found at:
+A good definition of pwned is found at:
 
     https://en.wikipedia.org/wiki/Leet#Owned_and_pwned
 
-Pwned is a slang form of owned: to appropriate or to conquer to gain ownership.
+pwned is a slang form of owned: to appropriate or to conquer to gain ownership.
 
-For information as to why a Pwned password should NOT be used, see:
+For information as to why a pwned password should NOT be used, see:
 
     https://haveibeenpwned.com/Passwords
     https://haveibeenpwned.com/FAQs
@@ -24,16 +24,18 @@ For information as to why a Pwned password should NOT be used, see:
 
 The `pwned-pw-download` tool will download the pwned password tree on your computer.
 Once you complete the download. **NO NETWORK ACCESS IS REQUIRED** to check if
-a password has been Pwned.
+a password has been pwned.
 
-There is **NO** network API required.
-There is **NO** messy .NET stuff.
-There is **NO** delay while the network request is being serviced.
-There is **NO** network service outage to worry about.
-There is **NO** risk that you Pwned lookup will be visible to the Internet.
+* There is **NO** network API required.
+* There is **NO** messy .NET stuff.
+* There is **NO** delay while the network request is being serviced.
+* There is **NO** network service outage to worry about.
+* There is **NO** risk that you pwned lookup will be visible to the Internet.
+* Checking if a password (or its SHA-1 hash) is in the local pwned password tree is quick.
+* Checking if a password (or its SHA-1 hash) has been pwned is private to your machine.
 
-Checking if a password (or its SHA-1 hash) is in the local pwned password tree is quick.
-Checking if a password (or its SHA-1 hash) has been Pwned is private to your machine.
+BTW: We have nothing against some of the other pwned tools you might find.
+We just prefer to use a local tool that can be inspected and/or adapted as needed.
 
 
 ## To fetch this repo onto your machine
@@ -43,34 +45,57 @@ git clone https://github.com/lcn2/pwned-pw-download.git
 ```
 
 
+## The pwned password tree
+
+The pwned password tree contains 4369 directories and 1048576 data
+files and 4096 curl.out diagnostic files.  The size of the 4-level
+pwned password tree, compressed, is about 39.03 gigabytes.
+
+The uncompressed pwned password tree is about 71.37 gigabytes,
+which is why we don't recommend not using the `-b` to disable
+compression, if you can help it.
+
+As of 2025 Dec 03: The pwned password tree contains 2,002,278,852
+unique pwned passwords, and 53,373,964,755 instances of pwnage
+for an average of about 26.66 pwnes per password.
+
+
+## Why a 4 level tree?
+
+The `pwned-pw-download.sh` shell script will download the entire dataset used by
+[HIBP](https://haveibeenpwned.com/Passwords) into a 4-level directory tree.
+
+Unlike some downloads, this will NOT form a huge directory, which for many
+file systems is not very efficient.  Instead, we form a 4-level tree where
+the bottom-level directories contain only 256 files each, plus a `curl.out` file
+for diagnostic purposes.
+
+
 ## The pwned-pw-download tool
 
-Download the pwned password database into a 4 level tree.
+The `pwned-pw-download` tool will download the pwned password database
+into a compressed 4-level tree.
 
-The tree contains 4369 directories and 1048576 data files
-and, 4096 curl.out diagnostic files.  The size of the
-4-level pwned password tree, compressed is about 40 Gigabytes.
-The uncompressed pwned password tree is about twice that size,
-and so we recommend not using the `-b` to disable compression
-if you can help it.
+As of 2025 Dec 03: The `pwned-pw-download` tool takes about 2 hours 15
+minutes to download and compress the tree as it is being downloaded.
 
-As of 2025 Dec 03: The `pwned-pw-download` tool takes about
-2 hours 15 minutes to download and compress the tree
-as it is being downloaded.
+**IMPORTANT NOTE**: As of 2025 Dec 03, the original files from
+[https://api.pwnedpasswords.com/range](https://api.pwnedpasswords.com/range)
+are in "_DOS_" format and they lack a final newline character.
+The `pwned-pw-download` tool assumes that you prefer a more modern file
+format and converts the files using the `dos2unix(1)` utility.  Should you
+prefer the original file format, use both `-d -a` on the command line.
 
 
 ## The ispwned tool
 
-Given an installed password database into a 4 level tree,
+Given an installed password database into a 4-level tree,
 determine if passwords (or the SHA-1 hash of passwords)
-are known to have been Pwned (in the password database).
+are known to have been pwned (in the password database).
 
-The Pwned check is local to your machine.  It uses common UNIX / Linux commands.
+The pwned check is local to your machine.  It uses common UNIX/Linux commands.
 The `ispwned` tool is a readable shell script that may be inspected,
 and/or modified as you wish.  There is no opaque binary pwned tool to wonder about.
-
-BTW: We have nothing against some of the other Pwned tools you might find.
-We just prefer to use a local tool that can be inspected and/or adapted as needed.
 
 
 # To install
@@ -101,7 +126,7 @@ cd pwned-pw-download
 
 # Example of using pwned-pw-download
 
-You may need to create `/usr/local/share/pwned.pw.tree` as as root
+You may need to create `/usr/local/share/pwned.pw.tree` as root
 and then give yourself write access before running `pwned-pw-download`,
 where `user` is your UNIX username and `group` is your UNIX groupname:
 
@@ -145,7 +170,7 @@ ispwned password
 ```
 
 If you would prefer to NOT have the password visible as an argument (that
-someone running `ps(1)` might be able to see, then run `ispwned` without
+someone running `ps(1)` might be able to see), then run `ispwned` without
 any arguments and type the file in input and end with an EOF (type Control D):
 
 ```sh
@@ -183,8 +208,8 @@ To not have any output, other than critical errors, use `-q`:
 ispwned -q < check.list
 ```
 
-To have the `ispwned` tool report if a password is **NOT** found in the local pwned password tree,
-use the `-o` option:
+To have the `ispwned` tool report if a password is **NOT** found in the
+local pwned password tree, use the `-o` option:
 
 ```sh
 ispwned -o dfasdfds2f sadfdsfsdafsdafasd fbwebwefiewbfwe
@@ -197,9 +222,9 @@ will exit 1.
 
 ```sh
 if ispwned -q < pw.list ; then
-    echo "no Pwned passwords detected"
+    echo "no pwned passwords detected"
 else
-    echo "something was Pwned"
+    echo "something was pwned"
 fi
 ```
 
@@ -213,20 +238,20 @@ usage: ispwned [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1su
     -v level    set verbosity level (def level: 0)
     -V          print version string and exit
 
-    -d topdir	Pwned password tree is under topdir (def: /usr/local/share/pwned.pw.tree)
+    -d topdir	pwned password tree is under topdir (def: /usr/local/share/pwned.pw.tree)
     -b bzgrep	path to bzgrep tool (def: /usr/bin/bzgrep)
     -g grep	path to grep tool (def: /usr/local/bin/grep)
     -S sha1sum	path to the sha1sum tool (def: /opt/homebrew/var/homebrew/linked/coreutils/libexec/gnubin/sha1sum)
 
     -s          args are SHA-1 hashes (def: args are passwords)
-    -q		stay quiet about Pwned passwords/hashes (def: announce Pwned passwords/hashes on stdout)
-    -o		announce non-Pwned passwords/hashes on stdout (def: stay quiet about non-Pwned passwords/hashes)
+    -q		stay quiet about pwned passwords/hashes (def: announce pwned passwords/hashes on stdout)
+    -o		announce non-pwned passwords/hashes on stdout (def: stay quiet about non-pwned passwords/hashes)
 
     [arg ...]	args are passwords, or SHA-1 hashes is -s (def: read from stdin)
 
 Exit codes:
-     0         no evidence that a password (or hash if -s) has been Pwned
-     1	       at least 1 password (or hash if -s) was found to be Pwned
+     0         no evidence that a password (or hash if -s) has been pwned
+     1	       at least 1 password (or hash if -s) was found to be pwned
      2         -h and help string printed or -V and version string printed
      3         command line error
      4	       topdir not found, or is not searchable, or some file under topdir was not found, or is not readable
@@ -275,26 +300,8 @@ Exit codes:
 pwned-pw-download version: 1.3.0 2025-12-03
 ```
 
-**IMPORTANT NOTE**: As of 2024-Dec-17, the original files from
-[https://api.pwnedpasswords.com/range](https://api.pwnedpasswords.com/range)
-are in "_DOS_" format and they lack a final newline character.
-The `pwned-pw-download` tool assumes that you prefer a more modern file
-format and converts the files using the `dos2unix(1)` utility.  Should you
-prefer the original file format, use both `-d -a` on the command line.
 
-
-## Why a 4 level tree?
-
-The `pwned-pw-download.sh` shell script will download the entire dataset used by
-[HIBP](https://haveibeenpwned.com/Passwords) into a 4 level directory tree.
-
-Unlike some downloads, this will will NOT form a huge directory, which for many
-file systems is not very efficient.  Instead, we form a 4 level tree where
-the bottom level directors contain only 256 files each, plus a `curl.out` file
-for diagnostic purposes.
-
-
-## Pwned password tree layout
+## pwned password tree layout
 
 The pwned password tree has 4 levels.  By default, files are of the form:
 
@@ -393,19 +400,19 @@ This will produce the line:
 This indicates that the password "`password`", has been pwned at least 46658894 times!
 
 
-## Integer Pwned counts
+## Integer pwned counts
 
 The integer count (that follows the remaining 35 hex digits followed by a `:`) is
 normally > 0.  In theory, any integer value might be found.  One should not
 special case any integer value that is <= 0.
 
-A 0 count could be a way that a password is declared Pwned when
-the number of instances found is unknown.  Moreover counts <= 0
+A 0 count could be a way that a password is declared pwned when
+the number of instances found is unknown.  Moreover, counts <= 0
 could be the result of an integer overflow in the part of the
-creators of the Pwned password dataset.
+creators of the pwned password dataset.
 
-Therefore, the count should be considered informational, and is NOT
-a means to determine if a given password is Pwned.
+Therefore, the count should be regarded as informational, and is NOT
+a means to determine if a given password is pwned.
 
 
 # Reporting Security Issues
