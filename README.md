@@ -228,40 +228,50 @@ else
 fi
 ```
 
+To print just pwned count and password/hash, and if not pwned print 0 and password/hash:
+
+```sh
+ispwned -o -c ...
+```
+
 
 ## ispwned usage
 
 ```
-usage: ispwned [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum] [-s] [-q] [-o] [arg ...]
+usage: ispwned [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum] [-s] [-q] [-o] [-c] [arg ...]
 
     -h          print help message and exit
     -v level    set verbosity level (def level: 0)
     -V          print version string and exit
 
-    -d topdir	pwned password tree is under topdir (def: /usr/local/share/pwned.pw.tree)
-    -b bzgrep	path to bzgrep tool (def: /usr/bin/bzgrep)
-    -g grep	path to grep tool (def: /usr/local/bin/grep)
-    -S sha1sum	path to the sha1sum tool (def: /opt/homebrew/var/homebrew/linked/coreutils/libexec/gnubin/sha1sum)
+    -d topdir   pwned password tree is under topdir (def: /usr/local/share/pwned.pw.tree)
+    -b bzgrep   path to bzgrep tool (def: /usr/bin/bzgrep)
+    -g grep     path to grep tool (def: /usr/local/bin/grep)
+    -S sha1sum  path to the sha1sum tool (def: /opt/homebrew/var/homebrew/linked/coreutils/libexec/gnubin/sha1sum)
 
     -s          args are SHA-1 hashes (def: args are passwords)
-    -q		stay quiet about pwned passwords/hashes (def: announce pwned passwords/hashes on stdout)
-    -o		announce non-pwned passwords/hashes on stdout (def: stay quiet about non-pwned passwords/hashes)
+    -q          stay quiet about pwned passwords/hashes (def: announce pwned passwords/hashes on stdout)
+    -o          announce non-pwned passwords/hashes on stdout (def: stay quiet about non-pwned passwords/hashes)
+    -c          print only pwned count and password/hash (def: do not)
+                    NOTE: if -o and not pwned, print count as 0 - only way a 0 pwned count is printed under -c
+                    NOTE: if pwned count is <= 0, or is an invalid count, print pwned count as -1
+                    NOTE: -q and -c conflict
 
-    [arg ...]	args are passwords, or SHA-1 hashes is -s (def: read from stdin)
+    [arg ...]   args are passwords, or SHA-1 hashes is -s (def: read from stdin)
 
 Exit codes:
      0         no evidence that a password (or hash if -s) has been pwned
-     1	       at least 1 password (or hash if -s) was found to be pwned
+     1         at least 1 password (or hash if -s) was found to be pwned
      2         -h and help string printed or -V and version string printed
      3         command line error
-     4	       topdir not found, or is not searchable, or some file under topdir was not found, or is not readable
-     5	       grep tool not found, or is not executable
-     6	       bzgrep tool not found, or is not executable
-     7	       sha1sum tool not found, or is not executable, or sha1sum tool exited non-zero
-     8	       line read or arg was empty (0 length), or hash was not a valid SHA-1 hash
+     4         topdir not found, or is not searchable, or some file under topdir was not found, or is not readable
+     5         grep tool not found, or is not executable
+     6         bzgrep tool not found, or is not executable
+     7         sha1sum tool not found, or is not executable, or sha1sum tool exited non-zero
+     8         line read or arg was empty (0 length), or hash was not a valid SHA-1 hash
  >= 10         internal error
 
-ispwned version: 1.0.0 2025-12-04
+ispwned version: 1.1.0 2025-12-06
 ```
 
 
@@ -278,7 +288,7 @@ pwned-pw-download [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_UR
     -d          do not un-DOS downloaded files (def: convert using /opt/homebrew/bin/dos2unix)
     -p parallel curl(1) files up to parallel at a time (def: 64)
     -U base_url curl(1) files from under base_url (def: https://api.pwnedpasswords.com/range)
-    -b		    do NOT bzip2 downloaded files (def: use $BZIP2 on downloaded files)
+    -b              do NOT bzip2 downloaded files (def: use $BZIP2 on downloaded files)
 
     topdir      top of the 4-level pwned password tree to form
 

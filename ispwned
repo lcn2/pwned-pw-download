@@ -19,13 +19,13 @@
 # Normally we download the 4 level directory tree of bzip2 compressed password files,
 # without DOS junk, and each file ending in a newline, via the command:
 #
-#        pwned-pw-download -v 5 /path/to/pwned.pw.tree
+#   pwned-pw-download -v 5 /path/to/pwned.pw.tree
 #
 # where "/path/to/pwned.pw.tree" is the topdir.
 #
 # There is an alternative that we allow: NOT bzip2 compression:
 #
-#        pwned-pw-download -b -v 5 /path/to/pwned.pw.tree
+#   pwned-pw-download -b -v 5 /path/to/pwned.pw.tree
 #
 # For information on pwned-pw-download see:
 #
@@ -70,7 +70,7 @@
 
 # setup
 #
-export VERSION="1.0.0 2025-12-04"
+export VERSION="1.1.0 2025-12-06"
 NAME=$(basename "$0")
 export NAME
 #
@@ -78,6 +78,7 @@ export V_FLAG=0
 export S_FLAG=
 export Q_FLAG=
 export O_FLAG=
+export C_FLAG=
 #
 export EXIT_CODE="0"
 #
@@ -95,33 +96,37 @@ export SHA1SUM_TOOL
 
 # usage
 #
-export USAGE="usage: $NAME [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum] [-s] [-q] [-o] [arg ...]
+export USAGE="usage: $NAME [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum] [-s] [-q] [-o] [-c] [arg ...]
 
     -h          print help message and exit
     -v level    set verbosity level (def level: $V_FLAG)
     -V          print version string and exit
 
-    -d topdir	Pwned password tree is under topdir (def: $TOPDIR)
-    -b bzgrep	path to bzgrep tool (def: $BZGREP_TOOL)
-    -g grep	path to grep tool (def: $GREP_TOOL)
-    -S sha1sum	path to the sha1sum tool (def: $SHA1SUM_TOOL)
+    -d topdir   Pwned password tree is under topdir (def: $TOPDIR)
+    -b bzgrep   path to bzgrep tool (def: $BZGREP_TOOL)
+    -g grep     path to grep tool (def: $GREP_TOOL)
+    -S sha1sum  path to the sha1sum tool (def: $SHA1SUM_TOOL)
 
     -s          args are SHA-1 hashes (def: args are passwords)
-    -q		stay quiet about Pwned passwords/hashes (def: announce Pwned passwords/hashes on stdout)
-    -o		announce non-Pwned passwords/hashes on stdout (def: stay quiet about non-Pwned passwords/hashes)
+    -q          stay quiet about Pwned passwords/hashes (def: announce Pwned passwords/hashes on stdout)
+    -o          announce non-Pwned passwords/hashes on stdout (def: stay quiet about non-Pwned passwords/hashes)
+    -c          print only pwned count and password/hash (def: do not)
+                    NOTE: if -o and not pwned, print count as 0 - only way a 0 pwned count is printed under -c
+                    NOTE: if pwned count is <= 0, or is an invalid count, print pwned count as -1
+                    NOTE: -q and -c conflict
 
-    [arg ...]	args are passwords, or SHA-1 hashes is -s (def: read from stdin)
+    [arg ...]   args are passwords, or SHA-1 hashes is -s (def: read from stdin)
 
 Exit codes:
      0         no evidence that a password (or hash if -s) has been Pwned
-     1	       at least 1 password (or hash if -s) was found to be Pwned
+     1         at least 1 password (or hash if -s) was found to be Pwned
      2         -h and help string printed or -V and version string printed
      3         command line error
-     4	       topdir not found, or is not searchable, or some file under topdir was not found, or is not readable
-     5	       grep tool not found, or is not executable
-     6	       bzgrep tool not found, or is not executable
-     7	       sha1sum tool not found, or is not executable, or sha1sum tool exited non-zero
-     8	       line read or arg was empty (0 length), or hash was not a valid SHA-1 hash
+     4         topdir not found, or is not searchable, or some file under topdir was not found, or is not readable
+     5         grep tool not found, or is not executable
+     6         bzgrep tool not found, or is not executable
+     7         sha1sum tool not found, or is not executable, or sha1sum tool exited non-zero
+     8         line read or arg was empty (0 length), or hash was not a valid SHA-1 hash
  >= 10         internal error
 
 $NAME version: $VERSION"
@@ -129,7 +134,7 @@ $NAME version: $VERSION"
 
 # parse command line
 #
-while getopts :hv:Vd:b:g:S:sqo flag; do
+while getopts :hv:Vd:b:g:S:sqoc flag; do
   case "$flag" in
     h) echo "$USAGE"
 	exit 2
@@ -152,6 +157,8 @@ while getopts :hv:Vd:b:g:S:sqo flag; do
     q) Q_FLAG="true"
 	;;
     o) O_FLAG="true"
+	;;
+    c) C_FLAG="true"
 	;;
     \?) echo "$NAME: ERROR: invalid option: -$OPTARG" 1>&2
 	echo 1>&2
@@ -256,12 +263,24 @@ if [[ $V_FLAG -ge 3 ]]; then
     echo "$NAME: debug[3]: S_FLAG=$S_FLAG" 1>&2
     echo "$NAME: debug[3]: Q_FLAG=$Q_FLAG" 1>&2
     echo "$NAME: debug[3]: O_FLAG=$O_FLAG" 1>&2
+    echo "$NAME: debug[3]: C_FLAG=$C_FLAG" 1>&2
     echo "$NAME: debug[3]: EXIT_CODE=$EXIT_CODE" 1>&2
     echo "$NAME: debug[3]: TOPDIR=$TOPDIR" 1>&2
     echo "$NAME: debug[3]: GREP_TOOL=$GREP_TOOL" 1>&2
     echo "$NAME: debug[3]: BZGREP_TOOL=$BZGREP_TOOL" 1>&2
     echo "$NAME: debug[3]: SHA1SUM_TOOL=$SHA1SUM_TOOL" 1>&2
 fi
+
+
+# -q and -c conflict
+#
+if [[ -n $Q_FLAG && -n $C_FLAG ]]; then
+    echo "$NAME: ERROR: -q and -c conflict" 1>&2
+    echo 1>&2
+    echo "$USAGE" 1>&2
+    exit 3
+fi
+
 
 # create a temporary exit code
 #
@@ -304,7 +323,6 @@ fi |
 # check each line if it is pwned
 #
 while read -r line; do
-
 
     # line cannot be empty
     #
@@ -415,7 +433,7 @@ while read -r line; do
 
     # case: we have a bz2 compressed file in the password tree filename
     #
-    FOUND=""
+    export FOUND=""
     if [[ -f $FILE_PATH_BZ2 && -r $FILE_PATH_BZ2 && -s $FILE_PATH_BZ2 ]]; then
 
 	# Look for a line in a compressed file that starts with the rest of the SHA-1 hash
@@ -449,17 +467,63 @@ while read -r line; do
 	continue
     fi
 
-    # case: match found, password is Pwned
+    # determine count without any trailing whitespace
+    #
+    # If for some reason the match plus : is no found, then just return was was found in the database.
+    #
+    COUNT=${FOUND##*:}
+    COUNT=${COUNT:-$FOUND}	 # paranoia
+    COUNT=${COUNT%%"${COUNT##*[![:space:]]}"}
+
+    # case: -c used - just print count and password
+    #
+    if [[ -n $C_FLAG ]]; then
+
+	# case: -c and match found, password is Pwned
+	#
+	if [[ -n $FOUND ]]; then
+
+	    # case: if count is not >= 0, set count to -1
+	    #
+	    if ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
+		COUNT="-1"
+	    elif [[ "$COUNT" -le 0 ]]; then
+		COUNT="-1"
+	    fi
+
+	    # case: -c and note Pwned password
+	    #
+	    if [[ -z $Q_FLAG ]]; then
+		if [[ -z $S_FLAG ]]; then
+		    echo "$COUNT $line"
+		else
+		    echo "$COUNT $SHA1_HASH"
+		fi
+		if [[ $V_FLAG -ge 1 ]]; then
+		    echo "$NAME: debug[1]: Pwned line: $FOUND" 1>&2
+		fi
+	    fi
+	    EXIT_CODE=1 # exit 1
+	    echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
+
+	# case: -c and no match, no evidence that password has been Pwned
+	#
+	elif [[ -n $O_FLAG ]]; then
+	    if [[ -z $S_FLAG ]]; then
+		echo "0 $line"
+	    else
+		echo "0 $SHA1_HASH"
+	    fi
+	fi
+
+	# finished -c processing
+	#
+	continue
+    fi
+
+    # case: match found, password is Pwned (and not -c)
     #
     if [[ -n $FOUND ]]; then
-
-	# determine count without any trailing whitespace
-	#
-	# If for some reason the match plus : is no found, then just return was was found in the database.
-	#
-	COUNT=${FOUND##*:}
-	COUNT=${COUNT:-$FOUND}	 # paranoia
-	COUNT=${COUNT%%"${COUNT##*[![:space:]]}"}
 
 	# note Pwned password
 	#
