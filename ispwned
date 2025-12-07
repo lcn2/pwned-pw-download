@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 #
-# ispwned - determine if a password, or SHA-1 of a password has been Pwned
+# ispwned - determine if a password, or SHA-1 of a password has been pwned
 #
 # We determine if passwords, or the SHA-1 of passwords (if -s was used)
-# are found in the Pwned password tree.
+# are found in the pwned password tree.
 #
-# A good definition of Pwned is found at:
+# A good definition of pwned is found at:
 #
 #   https://en.wikipedia.org/wiki/Leet#Owned_and_pwned
 #
-#   Pwned is a slang form of owned: to appropriate or to conquer to gain ownership.
+#   pwned is a slang form of owned: to appropriate or to conquer to gain ownership.
 #
-# For information as to why a Pwned password should NOT be used, see:
+# For information as to why a pwned password should NOT be used, see:
 #
 #   https://haveibeenpwned.com/Passwords
 #   https://haveibeenpwned.com/FAQs
@@ -33,12 +33,12 @@
 #
 # This includes information about the contents of the 4 level directory tree.
 #
-# NOTE: We do not care about the password count in in the Pwned password tree.
-#       Even a 0 count is good enough to declare the password Pwned.
-#       A 0 count could be a way that a password is declared Pwned when
+# NOTE: We do not care about the password count in in the pwned password tree.
+#       Even a 0 count is good enough to declare the password pwned.
+#       A 0 count could be a way that a password is declared pwned when
 #       the number of instances found is unknown.  Moreover counts <= 0
 #       could be the result of an integer overflow in the part of the
-#       creators of the Pwned password dataset.
+#       creators of the pwned password dataset.
 #
 # Copyright (c) 2025 by Landon Curt Noll.  All Rights Reserved.
 #
@@ -70,7 +70,7 @@
 
 # setup
 #
-export VERSION="1.1.0 2025-12-06"
+export VERSION="1.1.1 2025-12-06"
 NAME=$(basename "$0")
 export NAME
 #
@@ -78,6 +78,7 @@ export V_FLAG=0
 export S_FLAG=
 export Q_FLAG=
 export O_FLAG=
+export CAP_O_FLAG=
 export C_FLAG=
 #
 export EXIT_CODE="0"
@@ -96,20 +97,22 @@ export SHA1SUM_TOOL
 
 # usage
 #
-export USAGE="usage: $NAME [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum] [-s] [-q] [-o] [-c] [arg ...]
+export USAGE="usage: $NAME [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum] [-s] [-q] [-o] [-O] [-c] [arg ...]
 
     -h          print help message and exit
     -v level    set verbosity level (def level: $V_FLAG)
     -V          print version string and exit
 
-    -d topdir   Pwned password tree is under topdir (def: $TOPDIR)
+    -d topdir   pwned password tree is under topdir (def: $TOPDIR)
     -b bzgrep   path to bzgrep tool (def: $BZGREP_TOOL)
     -g grep     path to grep tool (def: $GREP_TOOL)
     -S sha1sum  path to the sha1sum tool (def: $SHA1SUM_TOOL)
 
     -s          args are SHA-1 hashes (def: args are passwords)
-    -q          stay quiet about Pwned passwords/hashes (def: announce Pwned passwords/hashes on stdout)
-    -o          announce non-Pwned passwords/hashes on stdout (def: stay quiet about non-Pwned passwords/hashes)
+    -q          stay quiet about pwned passwords/hashes (def: announce pwned passwords/hashes on stdout)
+    -o          also print non-pwned passwords/hashes on stdout (def: stay quiet about non-pwned passwords/hashes)
+    -O          print ONLY non non-pwned passwords/hashes on stdout (def: announce pwned, stay quiet about non-pwned)
+                    NOTE: -o and -O conflict
     -c          print only pwned count and password/hash (def: do not)
                     NOTE: if -o and not pwned, print count as 0 - only way a 0 pwned count is printed under -c
                     NOTE: if pwned count is <= 0, or is an invalid count, print pwned count as -1
@@ -118,8 +121,8 @@ export USAGE="usage: $NAME [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep
     [arg ...]   args are passwords, or SHA-1 hashes is -s (def: read from stdin)
 
 Exit codes:
-     0         no evidence that a password (or hash if -s) has been Pwned
-     1         at least 1 password (or hash if -s) was found to be Pwned
+     0         no evidence that a password (or hash if -s) has been pwned
+     1         at least 1 password (or hash if -s) was found to be pwned
      2         -h and help string printed or -V and version string printed
      3         command line error
      4         topdir not found, or is not searchable, or some file under topdir was not found, or is not readable
@@ -134,7 +137,7 @@ $NAME version: $VERSION"
 
 # parse command line
 #
-while getopts :hv:Vd:b:g:S:sqoc flag; do
+while getopts :hv:Vd:b:g:S:sqoOc flag; do
   case "$flag" in
     h) echo "$USAGE"
 	exit 2
@@ -157,6 +160,8 @@ while getopts :hv:Vd:b:g:S:sqoc flag; do
     q) Q_FLAG="true"
 	;;
     o) O_FLAG="true"
+	;;
+    O) CAP_O_FLAG="true"
 	;;
     c) C_FLAG="true"
 	;;
@@ -263,6 +268,7 @@ if [[ $V_FLAG -ge 3 ]]; then
     echo "$NAME: debug[3]: S_FLAG=$S_FLAG" 1>&2
     echo "$NAME: debug[3]: Q_FLAG=$Q_FLAG" 1>&2
     echo "$NAME: debug[3]: O_FLAG=$O_FLAG" 1>&2
+    echo "$NAME: debug[3]: CAP_O_FLAG=$CAP_O_FLAG" 1>&2
     echo "$NAME: debug[3]: C_FLAG=$C_FLAG" 1>&2
     echo "$NAME: debug[3]: EXIT_CODE=$EXIT_CODE" 1>&2
     echo "$NAME: debug[3]: TOPDIR=$TOPDIR" 1>&2
@@ -276,6 +282,15 @@ fi
 #
 if [[ -n $Q_FLAG && -n $C_FLAG ]]; then
     echo "$NAME: ERROR: -q and -c conflict" 1>&2
+    echo 1>&2
+    echo "$USAGE" 1>&2
+    exit 3
+fi
+
+# -o and -O conflict
+#
+if [[ -n $O_FLAG && -n $CAP_O_FLAG ]]; then
+    echo "$NAME: ERROR: -o and -O conflict" 1>&2
     echo 1>&2
     echo "$USAGE" 1>&2
     exit 3
@@ -412,7 +427,7 @@ while read -r line; do
 	echo "$NAME: debug[3]: will lookup SHA-1 hash: $SHA1_HASH" 1>&2
     fi
 
-    # build the components we need to lookup under the Pwned password tree
+    # build the components we need to lookup under the pwned password tree
     #
     HASH_I=${SHA1_HASH:0:1}
     HASH_J=${SHA1_HASH:1:1}
@@ -420,7 +435,7 @@ while read -r line; do
     HASH_IJKLM=${SHA1_HASH:0:5}
     HASH_REGEX="^${SHA1_HASH:5:40}:"
 
-    # determine the Pwned password tree filename
+    # determine the pwned password tree filename
     #
     FILE_PATH="$TOPDIR/$HASH_I/$HASH_J/$HASH_K/$HASH_IJKLM"
     FILE_PATH_BZ2="$FILE_PATH.bz2"
@@ -459,8 +474,8 @@ while read -r line; do
     # This should NOT happen if the password tree is complete.
     #
     else
-	echo "$NAME: ERROR: PLUS non-empty readable Pwned password tree file not found: $FILE_PATH.bz2" 1>&2
-	echo "$NAME: ERROR: non-empty readable Pwned password tree file not found: $FILE_PATH" 1>&2
+	echo "$NAME: ERROR: PLUS non-empty readable pwned password tree file not found: $FILE_PATH.bz2" 1>&2
+	echo "$NAME: ERROR: non-empty readable pwned password tree file not found: $FILE_PATH" 1>&2
 	EXIT_CODE=4 # exit 4
 	echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
 	echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
@@ -479,7 +494,7 @@ while read -r line; do
     #
     if [[ -n $C_FLAG ]]; then
 
-	# case: -c and match found, password is Pwned
+	# case: -c and match found, password is pwned
 	#
 	if [[ -n $FOUND ]]; then
 
@@ -491,24 +506,24 @@ while read -r line; do
 		COUNT="-1"
 	    fi
 
-	    # case: -c and note Pwned password
+	    # case: -c and note pwned password
 	    #
-	    if [[ -z $Q_FLAG ]]; then
+	    if [[ -z $CAP_O_FLAG ]]; then
 		if [[ -z $S_FLAG ]]; then
 		    echo "$COUNT $line"
 		else
 		    echo "$COUNT $SHA1_HASH"
 		fi
 		if [[ $V_FLAG -ge 1 ]]; then
-		    echo "$NAME: debug[1]: Pwned line: $FOUND" 1>&2
+		    echo "$NAME: debug[1]: pwned line: $FOUND" 1>&2
 		fi
 	    fi
 	    EXIT_CODE=1 # exit 1
 	    echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
 
-	# case: -c and no match, no evidence that password has been Pwned
+	# case: -c and no match, no evidence that password has been pwned
 	#
-	elif [[ -n $O_FLAG ]]; then
+	elif [[ -n $O_FLAG || -n $CAP_O_FLAG ]]; then
 	    if [[ -z $S_FLAG ]]; then
 		echo "0 $line"
 	    else
@@ -521,32 +536,32 @@ while read -r line; do
 	continue
     fi
 
-    # case: match found, password is Pwned (and not -c)
+    # case: match found, password is pwned (and not -c)
     #
     if [[ -n $FOUND ]]; then
 
-	# note Pwned password
+	# note pwned password
 	#
-	if [[ -z $Q_FLAG ]]; then
+	if [[ -z $Q_FLAG && -z $CAP_O_FLAG ]]; then
 	    if [[ -z $S_FLAG ]]; then
-		echo "$NAME: Notice: password: $line has been Pwned $COUNT times"
+		echo "$NAME: Notice: password: $line has been pwned $COUNT times"
 	    else
 		echo "$NAME: Notice: SHA-1 hash: $SHA1_HASH found with count: $COUNT"
 	    fi
 	    if [[ $V_FLAG -ge 1 ]]; then
-		echo "$NAME: debug[1]: Pwned line: $FOUND" 1>&2
+		echo "$NAME: debug[1]: pwned line: $FOUND" 1>&2
 	    fi
 	fi
 	EXIT_CODE=1 # exit 1
 	echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
 
-    # case: no match, no evidence that password has been Pwned
+    # case: no match, no evidence that password has been pwned
     #
-    elif [[ -n $O_FLAG ]]; then
+    elif [[ -n $O_FLAG || -n $CAP_O_FLAG ]]; then
 	if [[ -z $S_FLAG ]]; then
-	    echo "$NAME: Notice: no evidence found that password: $line has been Pwned"
+	    echo "$NAME: Notice: no evidence found that password: $line has been pwned"
 	else
-	    echo "$NAME: Notice: no evidence found that SHA-1 hash: $SHA1_HASH has been Pwned"
+	    echo "$NAME: Notice: no evidence found that SHA-1 hash: $SHA1_HASH has been pwned"
 	fi
     fi
 done
