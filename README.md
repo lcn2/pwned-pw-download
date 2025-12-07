@@ -420,7 +420,7 @@ This will produce the line:
 1E4C9B93F3F0682250B6CF8331B7EE68FD8:46658894
 ```
 
-This indicates that the password "`password`", has been pwned at least 46658894 times!
+This indicates that the password "`password`", has been pwned at least 46,658,894 times!
 
 
 ## Integer pwned counts
