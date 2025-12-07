@@ -68,9 +68,73 @@
 # Share and enjoy!  :-)
 
 
+# firewall - run only with a bash that is version 5.1.8 or later
+#
+# The "/usr/bin/env bash" command must result in using a bash that
+# is version 5.1.8 or later.
+#
+# We could relax this version and insist on version 4.2 or later.  Versions
+# of bash between 4.2 and 5.1.7 might work.  However, to be safe, we will require
+# bash version 5.1.8 or later.
+#
+# WHY 5.1.8 and not 4.2?  This safely is done because macOS Homebrew bash we
+# often use is "version 5.2.26(1)-release" or later, and the RHEL Linux bash we
+# use often use is "version 5.1.8(1)-release" or later.  These versions are what
+# we initially tested.  We recommend you either upgrade bash or install a newer
+# version of bash and adjust your $PATH so that "/usr/bin/env bash" finds a bash
+# that is version 5.1.8 or later.
+#
+# NOTE: The macOS shipped, as of 2024 March 15, a version of bash is something like
+#	bash "version 3.2.57(1)-release".  That macOS shipped version of bash
+#	will NOT work.  For users of macOS we recommend you install Homebrew,
+#	(see https://brew.sh), and then run "brew install bash" which will
+#	typically install it into /opt/homebrew/bin/bash, and then arrange your $PATH
+#	so that "/usr/bin/env bash" finds "/opt/homebrew/bin" (or whatever the
+#	Homebrew bash is).
+#
+# NOTE: And while MacPorts might work, we noticed a number of subtle differences
+#	with some of their ported tools to suggest you might be better off
+#	with installing Homebrew (see https://brew.sh).  No disrespect is intended
+#	to the MacPorts team as they do a commendable job.  Nevertheless we ran
+#	into enough differences with MacPorts environments to suggest you
+#	might find a better experience with this tool under Homebrew instead.
+#
+if [[ -z ${BASH_VERSINFO[0]} ||
+	 ${BASH_VERSINFO[0]} -lt 5 ||
+	 ${BASH_VERSINFO[0]} -eq 5 && ${BASH_VERSINFO[1]} -lt 1 ||
+	 ${BASH_VERSINFO[0]} -eq 5 && ${BASH_VERSINFO[1]} -eq 1 && ${BASH_VERSINFO[2]} -lt 8 ]]; then
+    echo "$0: ERROR: bash version needs to be >= 5.1.8: $BASH_VERSION" 1>&2
+    echo "$0: Warning: bash version >= 4.2 might work but 5.1.8 was the minimum we tested" 1>&2
+    echo "$0: Notice: For macOS users: install Homebrew (see https://brew.sh), then run" \
+	 ""brew install bash" and then modify your \$PATH so that \"#!/usr/bin/env bash\"" \
+	 "finds the Homebrew installed (usually /opt/homebrew/bin/bash) version of bash" 1>&2
+    exit 4
+fi
+
+
+# setup bash file matching
+#
+# We must declare arrays with -ag or -Ag, and we need loops to "export" modified variables.
+# This requires a bash with a version 4.2 or later.  See the larger comment above about bash versions.
+#
+shopt -s nullglob	# enable expanded to nothing rather than remaining unexpanded
+shopt -u failglob	# disable error message if no matches are found
+shopt -u dotglob	# disable matching files starting with .
+shopt -u nocaseglob	# disable strict case matching
+shopt -u extglob	# enable extended globbing patterns
+shopt -s globstar	# enable ** to match all files and zero or more directories and subdirectories
+
+
+# other required bash options
+#
+# Requires bash with a version 4.2 or later
+#
+shopt -s lastpipe	# run last command of a pipeline not executed in the background in the current shell environment
+
+
 # setup
 #
-export VERSION="1.1.1 2025-12-06"
+export VERSION="1.2.0 2025-12-07"
 NAME=$(basename "$0")
 export NAME
 #
@@ -80,6 +144,7 @@ export Q_FLAG=
 export O_FLAG=
 export CAP_O_FLAG=
 export C_FLAG=
+export T_FLAG=
 #
 export EXIT_CODE="0"
 #
@@ -97,7 +162,8 @@ export SHA1SUM_TOOL
 
 # usage
 #
-export USAGE="usage: $NAME [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum] [-s] [-q] [-o] [-O] [-c] [arg ...]
+export USAGE="usage: $NAME [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum]
+               [-s] [-q] [-o] [-O] [-c] [-t] [arg ...]
 
     -h          print help message and exit
     -v level    set verbosity level (def level: $V_FLAG)
@@ -117,6 +183,7 @@ export USAGE="usage: $NAME [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep
                     NOTE: if -o and not pwned, print count as 0 - only way a 0 pwned count is printed under -c
                     NOTE: if pwned count is <= 0, or is an invalid count, print pwned count as -1
                     NOTE: -q and -c conflict
+    -t          print the total number of not-yet-pwned, pwned, total passwords/hashes on stderr (def: do not)
 
     [arg ...]   args are passwords, or SHA-1 hashes is -s (def: read from stdin)
 
@@ -137,7 +204,7 @@ $NAME version: $VERSION"
 
 # parse command line
 #
-while getopts :hv:Vd:b:g:S:sqoOc flag; do
+while getopts :hv:Vd:b:g:S:sqoOct flag; do
   case "$flag" in
     h) echo "$USAGE"
 	exit 2
@@ -165,6 +232,8 @@ while getopts :hv:Vd:b:g:S:sqoOc flag; do
 	;;
     c) C_FLAG="true"
 	;;
+    t) T_FLAG="true"
+	;;
     \?) echo "$NAME: ERROR: invalid option: -$OPTARG" 1>&2
 	echo 1>&2
 	echo "$USAGE" 1>&2
@@ -182,9 +251,6 @@ while getopts :hv:Vd:b:g:S:sqoOc flag; do
 	;;
   esac
 done
-if [[ $V_FLAG -ge 1 ]]; then
-    echo "$NAME: debug[1]: debug level: $V_FLAG" 1>&2
-fi
 #
 # remove the options
 #
@@ -270,6 +336,7 @@ if [[ $V_FLAG -ge 3 ]]; then
     echo "$NAME: debug[3]: O_FLAG=$O_FLAG" 1>&2
     echo "$NAME: debug[3]: CAP_O_FLAG=$CAP_O_FLAG" 1>&2
     echo "$NAME: debug[3]: C_FLAG=$C_FLAG" 1>&2
+    echo "$NAME: debug[3]: T_FLAG=$T_FLAG" 1>&2
     echo "$NAME: debug[3]: EXIT_CODE=$EXIT_CODE" 1>&2
     echo "$NAME: debug[3]: TOPDIR=$TOPDIR" 1>&2
     echo "$NAME: debug[3]: GREP_TOOL=$GREP_TOOL" 1>&2
@@ -304,8 +371,8 @@ fi
 #
 TMPDIR=${TMPDIR:-/tmp}
 export TMP_EXIT_CODE="$TMPDIR/.tmp.$NAME.EXIT_CODE.$$.tmp"
-if [[ $V_FLAG -ge 3 ]]; then
-    echo  "$NAME: debug[3]: temporary exit code: $TMP_EXIT_CODE" 1>&2
+if [[ $V_FLAG -ge 7 ]]; then
+    echo  "$NAME: debug[7]: temporary exit code: $TMP_EXIT_CODE" 1>&2
 fi
 trap 'rm -f $TMP_EXIT_CODE; exit' 0 1 2 3 15
 rm -f "$TMP_EXIT_CODE"
@@ -322,6 +389,9 @@ fi
 
 # case: no args, read lines from stdin
 #
+export TOTAL=0
+export PWNED=0
+export NOT_PWNED=0
 if [[ $# -le 0 ]]; then
 
     while read -r line; do
@@ -439,11 +509,11 @@ while read -r line; do
     #
     FILE_PATH="$TOPDIR/$HASH_I/$HASH_J/$HASH_K/$HASH_IJKLM"
     FILE_PATH_BZ2="$FILE_PATH.bz2"
-    if [[ $V_FLAG -ge 3 ]]; then
-	echo "$NAME: debug[3]: FILE_PATH_BZ2: $FILE_PATH_BZ2" 1>&2
-    fi
     if [[ $V_FLAG -ge 5 ]]; then
-	echo "$NAME: debug[5]: FILE_PATH: $FILE_PATH" 1>&2
+	echo "$NAME: debug[5]: FILE_PATH_BZ2: $FILE_PATH_BZ2" 1>&2
+    fi
+    if [[ $V_FLAG -ge 7 ]]; then
+	echo "$NAME: debug[7]: FILE_PATH: $FILE_PATH" 1>&2
     fi
 
     # case: we have a bz2 compressed file in the password tree filename
@@ -489,6 +559,7 @@ while read -r line; do
     COUNT=${FOUND##*:}
     COUNT=${COUNT:-$FOUND}	 # paranoia
     COUNT=${COUNT%%"${COUNT##*[![:space:]]}"}
+    ((++TOTAL))
 
     # case: -c used - just print count and password
     #
@@ -514,10 +585,11 @@ while read -r line; do
 		else
 		    echo "$COUNT $SHA1_HASH"
 		fi
-		if [[ $V_FLAG -ge 1 ]]; then
-		    echo "$NAME: debug[1]: pwned line: $FOUND" 1>&2
+		if [[ $V_FLAG -ge 3 ]]; then
+		    echo "$NAME: debug[3]: pwned line: $FOUND" 1>&2
 		fi
 	    fi
+	    ((++PWNED))
 	    EXIT_CODE=1 # exit 1
 	    echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
 
@@ -529,6 +601,9 @@ while read -r line; do
 	    else
 		echo "0 $SHA1_HASH"
 	    fi
+	fi
+	if [[ -z $FOUND ]]; then
+	    ((++NOT_PWNED))
 	fi
 
 	# finished -c processing
@@ -548,10 +623,11 @@ while read -r line; do
 	    else
 		echo "$NAME: Notice: SHA-1 hash: $SHA1_HASH found with count: $COUNT"
 	    fi
-	    if [[ $V_FLAG -ge 1 ]]; then
-		echo "$NAME: debug[1]: pwned line: $FOUND" 1>&2
+	    if [[ $V_FLAG -ge 3 ]]; then
+		echo "$NAME: debug[3]: pwned line: $FOUND" 1>&2
 	    fi
 	fi
+	((++PWNED))
 	EXIT_CODE=1 # exit 1
 	echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
 
@@ -564,7 +640,28 @@ while read -r line; do
 	    echo "$NAME: Notice: no evidence found that SHA-1 hash: $SHA1_HASH has been pwned"
 	fi
     fi
+    if [[ -z $FOUND ]]; then
+	((++NOT_PWNED))
+    fi
 done
+
+
+# case: -t - print totals
+#
+if [[ -n $T_FLAG ]]; then
+    echo "$NOT_PWNED $PWNED $TOTAL" 1>&2
+    if [[ $V_FLAG -ge 1 ]]; then
+	if [[ -z $S_FLAG ]]; then
+	    echo "$NAME: debug[1]: total password(s) not-yet-pwned: $NOT_PWNED" 1>&2
+	    echo "$NAME: debug[1]: total password(s) pwned: $PWNED" 1>&2
+	    echo "$NAME: debug[1]: total password(s) processed: $TOTAL" 1>&2
+	else
+	    echo "$NAME: debug[1]: total hash(es) not-yet-pwned: $NOT_PWNED" 1>&2
+	    echo "$NAME: debug[1]: total hash(es) pwned: $PWNED" 1>&2
+	    echo "$NAME: debug[1]: total hash(es) processed: $TOTAL" 1>&2
+	fi
+    fi
+fi
 
 
 # All Done!!! -- Jessica Noll, Age 2

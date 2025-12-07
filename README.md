@@ -238,7 +238,8 @@ ispwned -o -c ...
 ## ispwned usage
 
 ```
-usage: ispwned [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum] [-s] [-q] [-o] [-O] [-c] [arg ...]
+usage: ispwned [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum]
+               [-s] [-q] [-o] [-O] [-c] [-t] [arg ...]
 
     -h          print help message and exit
     -v level    set verbosity level (def level: 0)
@@ -258,6 +259,7 @@ usage: ispwned [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1su
                     NOTE: if -o and not pwned, print count as 0 - only way a 0 pwned count is printed under -c
                     NOTE: if pwned count is <= 0, or is an invalid count, print pwned count as -1
                     NOTE: -q and -c conflict
+    -t          print the total number of not-yet-pwned, pwned, total passwords/hashes on stderr (def: do not)
 
     [arg ...]   args are passwords, or SHA-1 hashes is -s (def: read from stdin)
 
@@ -273,7 +275,7 @@ Exit codes:
      8         line read or arg was empty (0 length), or hash was not a valid SHA-1 hash
  >= 10         internal error
 
-ispwned version: 1.1.1 2025-12-06
+ispwned version: 1.2.0 2025-12-07
 ```
 
 
