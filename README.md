@@ -65,10 +65,10 @@ for an average of about 26.66 pwnes per password.
 The `pwned-pw-download.sh` shell script will download the entire dataset used by
 [HIBP](https://haveibeenpwned.com/Passwords) into a 4-level directory tree.
 
-Unlike some downloads, this will NOT form a huge directory, which for many
-file systems is not very efficient.  Instead, we form a 4-level tree where
-the bottom-level directories contain only 256 files each, plus a `curl.out` file
-for diagnostic purposes.
+Unlike some downloads, this will NOT form a huge million+ file directory,
+which for many file system types are not very efficient.  Instead, we
+form a 4-level tree where the bottom-level directories contain only 256
+files each, plus a `curl.out` file for diagnostic purposes.
 
 
 ## The pwned-pw-download tool
@@ -233,6 +233,15 @@ To print just pwned count and password/hash, and if not pwned print 0 and passwo
 ```sh
 ispwned -o -c ...
 ```
+
+To count total number of not-yet-pwned, pwned, total passwords/hashes for a list of passwords:
+
+```sh
+ispwned -t -q < pw.list.txt
+74 9926 10000
+```
+
+In the above example, 99.26% of the passwords in `pw.list.txt` were found to be pwned.
 
 
 ## ispwned usage
