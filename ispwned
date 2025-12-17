@@ -134,7 +134,7 @@ shopt -s lastpipe	# run last command of a pipeline not executed in the backgroun
 
 # setup
 #
-export VERSION="1.2.0 2025-12-07"
+export VERSION="1.2.1 2025-12-07"
 NAME=$(basename "$0")
 export NAME
 #
@@ -145,6 +145,7 @@ export O_FLAG=
 export CAP_O_FLAG=
 export C_FLAG=
 export T_FLAG=
+export CAP_B_FLAG=
 #
 export EXIT_CODE="0"
 #
@@ -163,7 +164,7 @@ export SHA1SUM_TOOL
 # usage
 #
 export USAGE="usage: $NAME [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum]
-               [-s] [-q] [-o] [-O] [-c] [-t] [arg ...]
+               [-s] [-q] [-o] [-O] [-c] [-t] [-B] [arg ...]
 
     -h          print help message and exit
     -v level    set verbosity level (def level: $V_FLAG)
@@ -179,11 +180,13 @@ export USAGE="usage: $NAME [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep
     -o          also print non-pwned passwords/hashes on stdout (def: stay quiet about non-pwned passwords/hashes)
     -O          print ONLY non non-pwned passwords/hashes on stdout (def: announce pwned, stay quiet about non-pwned)
                     NOTE: -o and -O conflict
+
     -c          print only pwned count and password/hash (def: do not)
                     NOTE: if -o and not pwned, print count as 0 - only way a 0 pwned count is printed under -c
                     NOTE: if pwned count is <= 0, or is an invalid count, print pwned count as -1
                     NOTE: -q and -c conflict
     -t          print the total number of not-yet-pwned, pwned, total passwords/hashes on stderr (def: do not)
+    -B          print brief notices, skip name and Notice tag: (def: do output name and notice tag)
 
     [arg ...]   args are passwords, or SHA-1 hashes is -s (def: read from stdin)
 
@@ -204,7 +207,7 @@ $NAME version: $VERSION"
 
 # parse command line
 #
-while getopts :hv:Vd:b:g:S:sqoOct flag; do
+while getopts :hv:Vd:b:g:S:sqoOctB flag; do
   case "$flag" in
     h) echo "$USAGE"
 	exit 2
@@ -233,6 +236,8 @@ while getopts :hv:Vd:b:g:S:sqoOct flag; do
     c) C_FLAG="true"
 	;;
     t) T_FLAG="true"
+	;;
+    B) CAP_B_FLAG="true"
 	;;
     \?) echo "$NAME: ERROR: invalid option: -$OPTARG" 1>&2
 	echo 1>&2
@@ -337,6 +342,7 @@ if [[ $V_FLAG -ge 3 ]]; then
     echo "$NAME: debug[3]: CAP_O_FLAG=$CAP_O_FLAG" 1>&2
     echo "$NAME: debug[3]: C_FLAG=$C_FLAG" 1>&2
     echo "$NAME: debug[3]: T_FLAG=$T_FLAG" 1>&2
+    echo "$NAME: debug[3]: CAP_B_FLAG=$CAP_B_FLAG" 1>&2
     echo "$NAME: debug[3]: EXIT_CODE=$EXIT_CODE" 1>&2
     echo "$NAME: debug[3]: TOPDIR=$TOPDIR" 1>&2
     echo "$NAME: debug[3]: GREP_TOOL=$GREP_TOOL" 1>&2
@@ -419,7 +425,7 @@ while read -r line; do
 	fi
 	EXIT_CODE=8 # exit 8
 	echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
-	echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+	echo "$NAME: Warning: EXIT_CODE set to: $EXIT_CODE" 1>&2
 	continue
     fi
 
@@ -437,7 +443,7 @@ while read -r line; do
 	    echo  "$NAME: ERROR: $SHA1SUM_TOOL - of $line failed, error: $status" 1>&2
 	    EXIT_CODE=7 # exit 7
 	    echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
-	    echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+	    echo "$NAME: Warning: EXIT_CODE set to: $EXIT_CODE" 1>&2
 	    continue
 	fi
 
@@ -453,7 +459,7 @@ while read -r line; do
 	echo "$NAME: ERROR: SHA-1 hash line is empty (0 length)" 1>&2
 	EXIT_CODE=8 # exit 8
 	echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
-	echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+	echo "$NAME: Warning: EXIT_CODE set to: $EXIT_CODE" 1>&2
 	continue
     fi
 
@@ -471,7 +477,7 @@ while read -r line; do
 	echo "$NAME: ERROR: SHA-1 hash is empty (0 length)" 1>&2
 	EXIT_CODE=8 # exit 8
 	echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
-	echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+	echo "$NAME: Warning: EXIT_CODE set to: $EXIT_CODE" 1>&2
 	continue
 
     # SHA-1 must be 40 chars long
@@ -480,7 +486,7 @@ while read -r line; do
 	echo "$NAME: ERROR: SHA-1 hash: $SHA1_HASH is not 40 chars long: ${#SHA1_HASH}" 1>&2
 	EXIT_CODE=8 # exit 8
 	echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
-	echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+	echo "$NAME: Warning: EXIT_CODE set to: $EXIT_CODE" 1>&2
 	continue
     fi
 
@@ -490,7 +496,7 @@ while read -r line; do
 	echo "$NAME: ERROR: SHA-1 string: $SHA1_HASH does not match ^[0-9A-F]+\$" 1>&2
 	EXIT_CODE=8 # exit 8
 	echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
-	echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+	echo "$NAME: Warning: EXIT_CODE set to: $EXIT_CODE" 1>&2
 	continue
     fi
     if [[ $V_FLAG -ge 3 ]]; then
@@ -548,7 +554,7 @@ while read -r line; do
 	echo "$NAME: ERROR: non-empty readable pwned password tree file not found: $FILE_PATH" 1>&2
 	EXIT_CODE=4 # exit 4
 	echo "$EXIT_CODE" > "$TMP_EXIT_CODE"
-	echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+	echo "$NAME: Warning: EXIT_CODE set to: $EXIT_CODE" 1>&2
 	continue
     fi
 
@@ -619,9 +625,17 @@ while read -r line; do
 	#
 	if [[ -z $Q_FLAG && -z $CAP_O_FLAG ]]; then
 	    if [[ -z $S_FLAG ]]; then
-		echo "$NAME: Notice: password: $line has been pwned $COUNT times"
+		if [[ -z $CAP_B_FLAG ]]; then
+		    echo "$NAME: Notice: password: $line has been pwned $COUNT times"
+		else
+		    echo "password: $line has been pwned $COUNT times"
+		fi
 	    else
-		echo "$NAME: Notice: SHA-1 hash: $SHA1_HASH found with count: $COUNT"
+		if [[ -z $CAP_B_FLAG ]]; then
+		    echo "$NAME: Notice: SHA-1 hash: $SHA1_HASH found with count: $COUNT"
+		else
+		    echo "SHA-1 hash: $SHA1_HASH found with count: $COUNT"
+		fi
 	    fi
 	    if [[ $V_FLAG -ge 3 ]]; then
 		echo "$NAME: debug[3]: pwned line: $FOUND" 1>&2
@@ -635,9 +649,17 @@ while read -r line; do
     #
     elif [[ -n $O_FLAG || -n $CAP_O_FLAG ]]; then
 	if [[ -z $S_FLAG ]]; then
-	    echo "$NAME: Notice: no evidence found that password: $line has been pwned"
+	    if [[ -z $CAP_B_FLAG ]]; then
+		echo "$NAME: Notice: no evidence found that password: $line has been pwned"
+	    else
+		echo "no evidence found that password: $line has been pwned"
+	    fi
 	else
-	    echo "$NAME: Notice: no evidence found that SHA-1 hash: $SHA1_HASH has been pwned"
+	    if [[ -z $CAP_B_FLAG ]]; then
+		echo "$NAME: Notice: no evidence found that SHA-1 hash: $SHA1_HASH has been pwned"
+	    else
+		echo "no evidence found that SHA-1 hash: $SHA1_HASH has been pwned"
+	    fi
 	fi
     fi
     if [[ -z $FOUND ]]; then
@@ -671,6 +693,10 @@ if [[ -s $TMP_EXIT_CODE ]]; then
 else
     echo "$NAME: Warning: TMP_EXIT_CODE file is empty: $TMP_EXIT_CODE" 1>&2
     EXIT_CODE=12 # exit 12
-    echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+    if [[ -z $CAP_B_FLAG ]]; then
+	echo "$NAME: Notice: EXIT_CODE set to: $EXIT_CODE" 1>&2
+    else
+	echo "EXIT_CODE set to: $EXIT_CODE" 1>&2
+    fi
 fi
 exit "$EXIT_CODE"

@@ -248,7 +248,7 @@ In the above example, 99.26% of the passwords in `pw.list.txt` were found to be 
 
 ```
 usage: ispwned [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1sum]
-               [-s] [-q] [-o] [-O] [-c] [-t] [arg ...]
+               [-s] [-q] [-o] [-O] [-c] [-t] [-B] [arg ...]
 
     -h          print help message and exit
     -v level    set verbosity level (def level: 0)
@@ -264,11 +264,13 @@ usage: ispwned [-h] [-v level] [-V] [-d topdir] [-b bzgrep] [-g grep] [-S sha1su
     -o          also print non-pwned passwords/hashes on stdout (def: stay quiet about non-pwned passwords/hashes)
     -O          print ONLY non non-pwned passwords/hashes on stdout (def: announce pwned, stay quiet about non-pwned)
                     NOTE: -o and -O conflict
+
     -c          print only pwned count and password/hash (def: do not)
                     NOTE: if -o and not pwned, print count as 0 - only way a 0 pwned count is printed under -c
                     NOTE: if pwned count is <= 0, or is an invalid count, print pwned count as -1
                     NOTE: -q and -c conflict
     -t          print the total number of not-yet-pwned, pwned, total passwords/hashes on stderr (def: do not)
+    -B          print brief notices, skip name and Notice tag: (def: do output name and notice tag)
 
     [arg ...]   args are passwords, or SHA-1 hashes is -s (def: read from stdin)
 
@@ -284,7 +286,7 @@ Exit codes:
      8         line read or arg was empty (0 length), or hash was not a valid SHA-1 hash
  >= 10         internal error
 
-ispwned version: 1.2.0 2025-12-07
+ispwned version: 1.2.1 2025-12-07
 ```
 
 
