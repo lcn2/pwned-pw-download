@@ -134,7 +134,7 @@ shopt -s lastpipe	# run last command of a pipeline not executed in the backgroun
 
 # setup
 #
-export VERSION="1.2.1 2025-12-07"
+export VERSION="1.2.1 2025-12-17"
 NAME=$(basename "$0")
 export NAME
 #
