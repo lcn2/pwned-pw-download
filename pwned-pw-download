@@ -14,7 +14,7 @@
 #
 #	https://github.com/lcn2/pwned-pw-download
 #
-# Copyright (c) 2024-2025 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 2024-2026 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -97,7 +97,7 @@ shopt -s globstar	# enable ** to match all files and zero or more directories an
 
 # setup
 #
-export VERSION="1.3.0 2025-12-03"
+export VERSION="1.4.0 2026-07-02"
 NAME=$(basename "$0")
 export NAME
 #
@@ -107,6 +107,7 @@ export D_FLAG=
 export PARALLEL=64
 export BASE_RANGE_URL="https://api.pwnedpasswords.com/range"
 export B_FLAG=
+export C_FLAG=
 #
 CURL=$(type -P curl)
 export CURL
@@ -133,7 +134,7 @@ export EXIT_CODE=0
 
 # usage
 #
-export USAGE="usage: $NAME [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] [-b] topdir
+export USAGE="usage: $NAME [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] [-b] [-c] topdir
 
     -h          print help message and exit
     -v level    set verbosity level (def level: $V_FLAG)
@@ -143,7 +144,8 @@ export USAGE="usage: $NAME [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE
     -d          do NOT un-DOS downloaded files (def: convert using $DOS2UNIX)
     -p parallel curl(1) files up to parallel at a time (def: $PARALLEL)
     -U base_url curl(1) files from under base_url (def: $BASE_RANGE_URL)
-    -b		do NOT bzip2 downloaded files (def: use $BZIP2_PROG on downloaded files)
+    -b          do NOT bzip2 downloaded files (def: use $BZIP2_PROG on downloaded files)
+    -c          continue downloading, assume existing data is current (def: download from the beginning, overwrite any data)
 
     topdir      top of the 4-level pwned password tree to form
 
@@ -167,7 +169,7 @@ $NAME version: $VERSION"
 
 # parse command line
 #
-while getopts :hv:Vadp:U:b flag; do
+while getopts :hv:Vadp:U:bc flag; do
   case "$flag" in
     h) echo "$USAGE"
 	exit 2
@@ -186,6 +188,8 @@ while getopts :hv:Vadp:U:b flag; do
     U) BASE_RANGE_URL="$OPTARG"
 	;;
     b) B_FLAG="true"
+	;;
+    c) C_FLAG="true"
 	;;
     \?) echo "$NAME: ERROR: invalid option: -$OPTARG" 1>&2
 	echo 1>&2
@@ -242,6 +246,7 @@ if [[ $V_FLAG -ge 3 ]]; then
     echo "$NAME: debug[3]: A_FLAG=$A_FLAG" 1>&2
     echo "$NAME: debug[3]: D_FLAG=$D_FLAG" 1>&2
     echo "$NAME: debug[3]: B_FLAG=$B_FLAG" 1>&2
+    echo "$NAME: debug[3]: C_FLAG=$C_FLAG" 1>&2
     echo "$NAME: debug[3]: PARALLEL=$PARALLEL" 1>&2
     echo "$NAME: debug[3]: BASE_RANGE_URL=$BASE_RANGE_URL" 1>&2
     echo "$NAME: debug[3]: CURL=$CURL" 1>&2
@@ -293,7 +298,7 @@ for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
 	    echo "$i/$j/$k"
 	done
     done
-done | xargs mkdir -p
+done | xargs mkdir -p -m 0775
 status=$?
 if [[ $status -ne 0 ]]; then
     echo "$NAME: making sub-directories under $TOPDIR failed, error: $status" 1>&2
@@ -358,6 +363,61 @@ for i in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
 		echo "$NAME: ERROR: cd $TOPDIR_PATH/$i$j$k failed" 1>&2
 		exit 15
 	    fi
+
+	    # case: -c - skip directory if it looks "complete"
+	    #
+	    export NEED_CURL="true"
+	    if [[ -n $C_FLAG ]]; then
+
+		# starting out with -c, assume we don't need to curl unless we prove otherwise
+		#
+		NEED_CURL=""
+
+		# must have a non-empty curl.out file
+		#
+		if [[ -s curl.out ]]; then
+		    if [[ $V_FLAG -ge 7 ]]; then
+			echo "$NAME: debug[7]: found non-empty: $TOPDIR/$i/$j/$k/curl.out" 1>&2
+		    fi
+		else
+		    NEED_CURL="true"
+		fi
+
+		# assuming we have a non-empty curl.out file, must have 256 non-empty bz2 files
+		#
+		if [[ -z $NEED_CURL ]]; then
+		    for l in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
+			for m in 0 1 2 3 4 5 6 7 8 9 A B C D E F; do
+			    if [[ -s "$i$j$k$l$m.bz2" ]]; then
+				if [[ $V_FLAG -ge 9 ]]; then
+				    echo "$NAME: debug[9]: found non-empty, assume OK: $TOPDIR/$i/$j/$k/$i$j$k$l$m.bz2" 1>&2
+				fi
+			    else
+				NEED_CURL="true"
+			    fi
+			done
+		    done
+		fi
+
+	    fi
+
+	    # skip if we don't need to curl
+	    #
+	    if [[ -z $NEED_CURL ]]; then
+		if [[ $V_FLAG -ge 5 ]]; then
+		    echo "$NAME: debug[5]: continuing (-c) mode, no need to curl: $i$j$k" 1>&2
+		fi
+		continue
+	    elif [[ -n $C_FLAG && $V_FLAG -ge 3 ]]; then
+		echo "$NAME: debug[3]: continuing (-c) mode, about to curl: $i$j$k" 1>&2
+	    fi
+
+	    # prep for curling
+	    #
+	    if [[ ! -w . ]]; then
+		chmod +w .
+	    fi
+	    rm -f curl.out
 
 	    # download up to 256 files, up to PARALLEL at a time
 	    #

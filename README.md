@@ -6,6 +6,51 @@
 Download the pwned password database.  Look up passwords or hashes of passwords in your database.
 
 
+### TL;DR 0. clone code
+
+Fetch the code:
+
+```sh
+git clone https://github.com/lcn2/pwned-pw-download.git
+cd pwned-pw-download
+```
+
+
+### TL;DR 1. Install code
+
+```sh
+sudo make install
+```
+
+
+### TL;DR 2. Form top of the pwned password tree
+
+Form the top of the pwned password tree:
+
+```sh
+sudo mkdir -p /usr/local/share/pwned.pw.tree
+sudo chmod 0755 /usr/local/share/pwned.pw.tree
+```
+
+
+### TL;DR 3. Download the pwned password database
+
+Download the pwned password database:
+
+```sh
+sudo pwned-pw-download -v 3 /usr/local/share/pwned.pw.tree
+```
+
+
+### TL;DR 4. If interrupted while downloading
+
+If your download is interrupted, and want to just continue:
+
+```sh
+sudo pwned-pw-download -v 3 -c /usr/local/share/pwned.pw.tree
+```
+
+
 ## What is pwned?
 
 A good definition of pwned is found at:
@@ -49,15 +94,24 @@ git clone https://github.com/lcn2/pwned-pw-download.git
 
 The pwned password tree contains 4369 directories and 1048576 data
 files and 4096 curl.out diagnostic files.  The size of the 4-level
-pwned password tree, compressed, is about 39.03 gigabytes.
+pwned password tree, compressed, is about 40.0 gigabytes.
 
-The uncompressed pwned password tree is about 71.37 gigabytes,
+The uncompressed pwned password tree is about 73.7 gigabytes,
 which is why we don't recommend not using the `-b` to disable
 compression, if you can help it.
 
-As of 2025 Dec 03: The pwned password tree contains 2,002,278,852
-unique pwned passwords, and 53,373,964,755 instances of pwnage
-for an average of about 26.66 pwnes per password.
+Using the following commands, we can determine the number of unique
+pwned passwords, instances of pwnage, and average pwnes per password:
+
+```sh
+cd /usr/local/share/pwned.pw.tree
+find . -name '*.bz2' | xargs bzcat | sed -e 's/^.*://' |
+  awk '{count += $1;} END {print "pwned:", count, "passwords:", NR, "average:", count/NR;}'
+```
+
+As of 2026 Jul 02: The pwned password tree contained 2,068,408,781
+unique pwned passwords, and 57,002,655,265 instances of pwnage
+for an average of about 27.56 pwnes per password.
 
 
 ## Why a 4 level tree?
@@ -76,10 +130,24 @@ files each, plus a `curl.out` file for diagnostic purposes.
 The `pwned-pw-download` tool will download the pwned password database
 into a compressed 4-level tree.
 
-As of 2025 Dec 03: The `pwned-pw-download` tool takes about 2 hours 15
-minutes to download and compress the tree as it is being downloaded.
+As of 2026 Jul 02: The `pwned-pw-download` tool takes about 1 hours 30
+minutes to download and compress the tree as it is being downloaded
+(you time may vary due to network and host speeds):
 
-**IMPORTANT NOTE**: As of 2025 Dec 03, the original files from
+```sh
+sudo time /var/tmp/pwned-pw-download -v 3 /usr/local/share/pwned.pw.tree
+...
+pwned-pw-download: debug[1]: processing: 00
+pwned-pw-download: debug[3]: processing: 000
+pwned-pw-download: debug[3]: processing: 001
+...
+pwned-pw-download: debug[3]: processing: FFE
+pwned-pw-download: debug[3]: processing: FFF
+3881.66user 813.04system 1:29:39elapsed 87%CPU (0avgtext+0avgdata 14920maxresident)k
+5672inputs+405484128outputs (234major+194795737minor)pagefaults 0swaps
+```
+
+**IMPORTANT NOTE**: As of 2026 Jul 02, the original files from
 [https://api.pwnedpasswords.com/range](https://api.pwnedpasswords.com/range)
 are in "_DOS_" format and they lack a final newline character.
 The `pwned-pw-download` tool assumes that you prefer a more modern file
@@ -126,30 +194,39 @@ cd pwned-pw-download
 
 # Example of using pwned-pw-download
 
-You may need to create `/usr/local/share/pwned.pw.tree` as root
-and then give yourself write access before running `pwned-pw-download`,
-where `user` is your UNIX username and `group` is your UNIX groupname:
+Create the pwned password tree:
 
 ```sh
 sudo mkdir -p /usr/local/share/pwned.pw.tree
-sudo chown -R user:group /usr/local/share/pwned.pw.tree
-sudo chmod 0755 /usr/local/share/pwned.pw.tree
 ```
 
 To use, we suggest:
 
 ```sh
-pwned-pw-download -v 3 /usr/local/share/pwned.pw.tree
+sudo pwned-pw-download -v 3 /usr/local/share/pwned.pw.tree
+```
+
+If your download is interrupted, and want to just continue:
+
+```sh
+sudo pwned-pw-download -v 3 -c /usr/local/share/pwned.pw.tree
 ```
 
 **NOTE**: The above command assumes that `pwned-pw-download` has been put
 into your search `$PATH`.  If it is not, supply the full path
 to where you find the `pwned-pw-download` tool.
 
-Then to be safe, make the pwned password tree read-only:
+If you make the pwned password tree read-only ..
 
 ```sh
-sudo chmod -R -w /usr/local/share/pwned.pw.tree
+sudo chmod -R ogu-w -v /usr/local/share/pwned.pw.tree
+```
+
+.. and you wish to reload / update the pwned password database, you will
+need to make the directories in the pwned password tree writable before you rerun:
+
+```sh
+find /usr/local/share/pwned.pw.tree -type d | sudo xargs chmod +w -v
 ```
 
 
@@ -180,14 +257,35 @@ ispwned
 Check the SHA-1 hash of a password instead:
 
 ```sh
-ispwned -s 1E4C9B93F3F0682250B6CF8331B7EE68FD8
+ispwned -s 5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8
 ```
 
-You can supply multiple passwords or SHA-1 hashes of passwords the command line:
+You can supply multiple passwords on the command line:
 
 ```sh
-ispwned password ispwned passw0rd Passwd
-ispwned -s 1E4C9B93F3F0682250B6CF8331B7EE68FD8 1C68EF8B9B6B061B28C348BC1ED7921CB53 D6CBC8FDC427A5A59FC996049732E029440
+ispwned password passw0rd Passwd
+```
+
+On 2026 Jul 02 produced:
+
+```
+ispwned: Notice: password: password has been pwned 52372427 times
+ispwned: Notice: password: passw0rd has been pwned 1612444 times
+ispwned: Notice: password: Passwd has been pwned 8986 times
+```
+
+You can supply multiple SHA-1 hashes on the command line:
+
+```sh
+ispwned -s 5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8 7C6A61C68EF8B9B6B061B28C348BC1ED7921CB53 9FD1BD6CBC8FDC427A5A59FC996049732E029440
+```
+
+On 2026 Jul 02 produced:
+
+```
+ispwned: Notice: SHA-1 hash: 5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8 found with count: 52372427
+ispwned: Notice: SHA-1 hash: 7C6A61C68EF8B9B6B061B28C348BC1ED7921CB53 found with count: 1612444
+ispwned: Notice: SHA-1 hash: 9FD1BD6CBC8FDC427A5A59FC996049732E029440 found with count: 8986
 ```
 
 If you have a file of passwords, one per line:
@@ -213,6 +311,14 @@ local pwned password tree, use the `-o` option:
 
 ```sh
 ispwned -o dfasdfds2f sadfdsfsdafsdafasd fbwebwefiewbfwe
+```
+
+On 2026 Jul 02, produced:
+
+```
+ispwned: Notice: no evidence found that password: dfasdfds2f has been pwned
+ispwned: Notice: no evidence found that password: sadfdsfsdafsdafasd has been pwned
+ispwned: Notice: no evidence found that password: fbwebwefiewbfwe has been pwned
 ```
 
 The `ispwned` tool will exit 0 if none of the passwords (or SHA-1 hashes
@@ -293,23 +399,24 @@ ispwned version: 1.2.1 2025-12-07
 ## pwned-pw-download usage
 
 ```
-pwned-pw-download [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] [-b] topdir
+usage: pwned-pw-download [-h] [-v level] [-V] [-a] [-d] [-p parallel] [-U BASE_RANGE_URL] [-b] [-c] topdir
 
     -h          print help message and exit
     -v level    set verbosity level (def level: 0)
     -V          print version string and exit
 
-    -a          do not append a final newline to downloaded files (def: do)
-    -d          do not un-DOS downloaded files (def: convert using /opt/homebrew/bin/dos2unix)
+    -a          do NOT append a final newline to downloaded files (def: do)
+    -d          do NOT un-DOS downloaded files (def: convert using /opt/homebrew/bin/dos2unix)
     -p parallel curl(1) files up to parallel at a time (def: 64)
     -U base_url curl(1) files from under base_url (def: https://api.pwnedpasswords.com/range)
-    -b              do NOT bzip2 downloaded files (def: use $BZIP2 on downloaded files)
+    -b          do NOT bzip2 downloaded files (def: use /usr/bin/bzip2 on downloaded files)
+    -c          continue downloading, assume existing data is current (def: download from the beginning, overwrite any data)
 
     topdir      top of the 4-level pwned password tree to form
 
-    NOTE: For more information see:
+    NOTE: For more information, see: https://github.com/lcn2/pwned-pw-download
 
-        https://github.com/lcn2/pwned-pw-download
+    Try: pwned-pw-download -v 3 pwned.password.tree
 
 Exit codes:
      0         all OK
@@ -322,7 +429,7 @@ Exit codes:
      8         some bzip2 command exited nonzero, or bzip2 command not found
  >= 10         internal error
 
-pwned-pw-download version: 1.3.0 2025-12-03
+pwned-pw-download version: 1.4.0 2026-07-02
 ```
 
 
@@ -367,7 +474,7 @@ For example, all pwned passwords with a SHA-1 that begin with `12345` will be fo
 The `1/2/3/12345` contains the following line:
 
 ```
-00772720168B19640759677862AD5350374:4
+00772720168B19640759677862AD5350374:20
 ```
 
 The SHA-1 hash of the pwned password is the 1st 5 HEX digits from the file,
@@ -379,7 +486,7 @@ SHA-1 hash of the pwned password is:
 ```
 
 The `4` after the colon (":") means that the given password has been pwned at
-least 4 times and should **NOT** be used.
+least 20 times and should **NOT** be used.
 
 
 ## Example: Lookup password in the tree
@@ -416,13 +523,13 @@ or if `-b` was used:
 grep -F 1E4C9B93F3F0682250B6CF8331B7EE68FD8: 5/B/A/5BAA6
 ```
 
-This will produce the line:
+On 2026 July 02, this produced the line:
 
 ```
-1E4C9B93F3F0682250B6CF8331B7EE68FD8:46658894
+1E4C9B93F3F0682250B6CF8331B7EE68FD8:52372427
 ```
 
-This indicates that the password "`password`", has been pwned at least 46,658,894 times!
+This indicates that the password "`password`", has been pwned at least 52,372,427 times!
 
 
 ## Integer pwned counts
